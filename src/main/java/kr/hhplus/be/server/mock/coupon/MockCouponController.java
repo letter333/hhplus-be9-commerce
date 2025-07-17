@@ -9,6 +9,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.hhplus.be.server.mock.common.Response;
 import kr.hhplus.be.server.mock.coupon.dto.CouponResponse;
+import kr.hhplus.be.server.mock.coupon.dto.IssueCouponRequest;
+import kr.hhplus.be.server.mock.coupon.dto.IssueCouponResponse;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.ZoneId;
@@ -95,5 +97,51 @@ public class MockCouponController {
         );
 
         return Response.ok(couponResponses);
+    }
+
+    @Operation(summary = "쿠폰 발급", description = "쿠폰 발급")
+    @ApiResponse(
+            responseCode = "200",
+            description = "쿠폰 발급 성공",
+            content = @Content(
+                    schema = @Schema(implementation = Response.class),
+                    examples = @ExampleObject(
+                            name = "쿠폰 발급 예시",
+                            value = """
+                                {
+                                      "code": "OK",
+                                      "message": "쿠폰 발급 성공",
+                                      "data": {
+                                          "id": 3,
+                                          "couponName": "특별 할인 쿠폰",
+                                          "couponCode": "aaabbbccc",
+                                          "couponType": "PERCENTAGE",
+                                          "amount": null,
+                                          "percentage": 10,
+                                          "status": "ISSUED",
+                                          "expiredAt": "2025-07-31T00:00:00+09:00",
+                                          "createdAt": null
+                                      }
+                                }
+                """
+                    )
+            )
+    )
+    @PostMapping("/api/v1/users/{id}/coupons")
+    public Response<IssueCouponResponse> issue(
+            @Parameter(description = "사용자 ID", example = "1") @PathVariable Long id,
+            @RequestBody IssueCouponRequest issueCouponRequest
+    ) {
+        IssueCouponResponse coupon = new IssueCouponResponse(
+                3L,
+                "특별 할인 쿠폰",
+                "aaabbbccc", CouponResponse.type.PERCENTAGE,
+                null,
+                10L,
+                CouponResponse.status.ISSUED,
+                ZonedDateTime.of(2025, 7, 31, 0, 0, 0, 0, ZoneId.of("Asia/Seoul")),
+                null);
+
+        return Response.ok("쿠폰 발급 성공", coupon);
     }
 }
