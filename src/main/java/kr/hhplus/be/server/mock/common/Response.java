@@ -17,4 +17,8 @@ public record Response<T>(
     public static <T> Response<T> ok(String message, T data) {
         return new Response<>(HttpStatus.OK, message, data);
     }
+
+    public static <T> Response<T> ok(T data) {
+        return new Response<>(HttpStatus.OK, null, data);
+    }
 }
