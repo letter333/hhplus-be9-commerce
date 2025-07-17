@@ -11,11 +11,13 @@ public record CreateOrderRequest(
         List<OrderProductRequest> orderProductList,
         @Schema(description = "사용 쿠폰", example = "1")
         Long userCouponId,
-        @Schema(description = "기본 주소", example = "기본 주소")
+        @Schema(description = "배송지 기본 주소", example = "배송지 기본 주소")
         String shippingAddress1,
-        @Schema(description = "상세 주소", example = "상세 주소")
+        @Schema(description = "배송지 상세 주소", example = "배송지 상세 주소")
         String shippingAddress2,
-        @Schema(description = "우편 번호", example = "우편 번호")
-        String shippingZipCode
+        @Schema(description = "배송지 우편 번호", example = "배송지 우편 번호")
+        String shippingZipCode,
+        @Schema(description = "받는 사람 번호", example = "01012341234")
+        String recipientNumber
 ) {
 }

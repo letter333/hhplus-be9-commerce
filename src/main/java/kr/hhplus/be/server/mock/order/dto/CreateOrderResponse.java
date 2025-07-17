@@ -12,6 +12,7 @@ public record CreateOrderResponse(
         String shippingAddress1,
         String shippingAddress2,
         String shippingZipCode,
+        String recipientNumber,
         ZonedDateTime createdAt
 
 ) {

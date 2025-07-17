@@ -40,6 +40,7 @@ public class MockOrderController {
                                     "shippingAddress1": "기본 주소",
                                     "shippingAddress2": "상세 주소",
                                     "shippingZipCode": "123456",
+                                    "recipientNumber": "01012341234",
                                     "createdAt": "2025-07-18T00:57:34.1746101+09:00"
                                   }
                                 }
@@ -61,6 +62,7 @@ public class MockOrderController {
                 "기본 주소",
                 "상세 주소",
                 "123456",
+                "01012341234",
                 ZonedDateTime.now()
         ));
     }
