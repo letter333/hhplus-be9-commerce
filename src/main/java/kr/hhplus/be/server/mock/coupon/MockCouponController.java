@@ -127,9 +127,9 @@ public class MockCouponController {
                     )
             )
     )
-    @PostMapping("/api/v1/users/{id}/coupons")
+    @PostMapping("/api/v1/coupons/{id}/issue")
     public Response<IssueCouponResponse> issue(
-            @Parameter(description = "사용자 ID", example = "1") @PathVariable Long id,
+            @Parameter(description = "쿠폰 ID", example = "3") @PathVariable Long id,
             @RequestBody IssueCouponRequest issueCouponRequest
     ) {
         IssueCouponResponse coupon = new IssueCouponResponse(
