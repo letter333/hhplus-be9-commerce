@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.mock.Point.dto;
+package kr.hhplus.be.server.mock.point.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 

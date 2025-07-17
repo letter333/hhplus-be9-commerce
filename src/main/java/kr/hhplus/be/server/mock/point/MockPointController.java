@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.mock.Point;
+package kr.hhplus.be.server.mock.point;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -7,9 +7,9 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import kr.hhplus.be.server.mock.Point.dto.ChargePointRequest;
-import kr.hhplus.be.server.mock.Point.dto.ChargePointResponse;
-import kr.hhplus.be.server.mock.Point.dto.PointResponse;
+import kr.hhplus.be.server.mock.point.dto.ChargePointRequest;
+import kr.hhplus.be.server.mock.point.dto.ChargePointResponse;
+import kr.hhplus.be.server.mock.point.dto.PointResponse;
 import kr.hhplus.be.server.mock.common.Response;
 import org.springframework.web.bind.annotation.*;
 
