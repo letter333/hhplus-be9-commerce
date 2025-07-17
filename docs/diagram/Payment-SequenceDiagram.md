@@ -1,3 +1,4 @@
+## 결제
 ```mermaid
 sequenceDiagram
     actor User as 사용자

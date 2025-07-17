@@ -1,3 +1,4 @@
+## 주문
 ```mermaid
 sequenceDiagram
     actor User as 사용자
@@ -51,7 +52,8 @@ sequenceDiagram
     OrderController-->>Client: 결과 반환
     Client-->>User: 결과 표시
 ```
-
+---------------
+## 주문 취소 스케줄러
 ```mermaid
 sequenceDiagram
     participant Scheduler as 스케줄러
@@ -72,7 +74,7 @@ sequenceDiagram
                 ProductRepository-->>Scheduler: 재고 복구 완료
                 
                 opt 쿠폰 사용 주문
-                    Scheduler->>CouponRepository: 쿠폰 상태 업데이트(미사용)
+                    Scheduler->>CouponRepository: 쿠폰 상태 업데이트(발급)
                     CouponRepository-->>Scheduler: 상태 업데이트 완료
                 end
             end
