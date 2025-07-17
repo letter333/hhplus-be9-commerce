@@ -77,6 +77,7 @@ erDiagram
         STRING shipping_address1 "배송지 기본 주소"
         STRING shipping_address2 "배송지 상세 주소"
         STRING shipping_zip_code "배송지 우편 번호"
+        STRING recipient_number "받는 사람 번호"
         DATETIME created_at "생성 시간[idx]"
         DATETIME updated_at "수정 시간(nullable)"
     }
