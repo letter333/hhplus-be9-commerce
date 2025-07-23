@@ -11,6 +11,7 @@ public class Point {
 
     public static Long MAX_AMOUNT_PER_CHARGE = 1_000_000L;
     public static Long MAX_TOTAL_AMOUNT = 10_000_000L;
+    public static Long MIN_AMOUNT_PER_CHARGE = 1L;
     public static Long MIN_AMOUNT_PER_USE = 1L;
 
 
@@ -22,24 +23,39 @@ public class Point {
     }
 
     public void charge(Long chargeAmount) {
-        validationCharge(chargeAmount);
+        validateCharge(chargeAmount);
         this.amount = this.amount + chargeAmount;
     }
 
     public void use(Long useAmount) {
-        validationUse(useAmount);
+        validateUse(useAmount);
         this.amount = this.amount - useAmount;
     }
 
-    public void validationCharge(Long chargeAmount) {
-        if(chargeAmount > MAX_AMOUNT_PER_CHARGE || chargeAmount <= 0 || this.amount + chargeAmount > MAX_TOTAL_AMOUNT) {
-            throw new IllegalArgumentException("유효하지 않은 입력값 입니다.");
+    public void validateCharge(Long chargeAmount) {
+        if (chargeAmount == null) {
+            throw new IllegalArgumentException("충전 금액은 필수입니다.");
+        }
+
+        if(chargeAmount > MAX_AMOUNT_PER_CHARGE) {
+            throw new IllegalArgumentException(String.format("1회 충전 가능한 최대 금액은 %,d원입니다.", MAX_AMOUNT_PER_CHARGE));
+        }
+
+        if(chargeAmount <= 0) {
+            throw new IllegalArgumentException(String.format("충전 금액은 %d원 이상이어야 합니다.", MIN_AMOUNT_PER_CHARGE));
+        }
+
+        if(this.amount + chargeAmount > MAX_TOTAL_AMOUNT) {
+            throw new IllegalArgumentException(String.format("보유 가능한 최대 포인트는 %,d원입니다.", MAX_TOTAL_AMOUNT));
         }
     }
 
-    public void validationUse(Long useAmount) {
-        if(useAmount < MIN_AMOUNT_PER_USE || useAmount > this.amount) {
-            throw new IllegalArgumentException("유효하지 않은 입력값 입니다.");
+    public void validateUse(Long useAmount) {
+        if(useAmount < MIN_AMOUNT_PER_USE) {
+            throw new IllegalArgumentException(String.format("최소 사용 금액은 %d원입니다.", MIN_AMOUNT_PER_USE));
+        }
+        if(useAmount > this.amount) {
+            throw new IllegalArgumentException("잔액이 부족합니다.");
         }
     }
 }
