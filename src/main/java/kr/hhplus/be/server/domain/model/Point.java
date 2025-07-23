@@ -9,10 +9,10 @@ public class Point {
     private Long userId;
     private Long amount;
 
-    public static Long MAX_AMOUNT_PER_CHARGE = 1_000_000L;
-    public static Long MAX_TOTAL_AMOUNT = 10_000_000L;
-    public static Long MIN_AMOUNT_PER_CHARGE = 1L;
-    public static Long MIN_AMOUNT_PER_USE = 1L;
+    private static final Long MAX_AMOUNT_PER_CHARGE = 1_000_000L;
+    private static final Long MAX_TOTAL_AMOUNT = 10_000_000L;
+    private static final Long MIN_AMOUNT_PER_CHARGE = 1L;
+    private static final Long MIN_AMOUNT_PER_USE = 1L;
 
 
     @Builder
@@ -32,7 +32,7 @@ public class Point {
         this.amount = this.amount - useAmount;
     }
 
-    public void validateCharge(Long chargeAmount) {
+    private void validateCharge(Long chargeAmount) {
         if (chargeAmount == null) {
             throw new IllegalArgumentException("충전 금액은 필수입니다.");
         }
@@ -50,7 +50,7 @@ public class Point {
         }
     }
 
-    public void validateUse(Long useAmount) {
+    private void validateUse(Long useAmount) {
         if(useAmount < MIN_AMOUNT_PER_USE) {
             throw new IllegalArgumentException(String.format("최소 사용 금액은 %d원입니다.", MIN_AMOUNT_PER_USE));
         }
