@@ -62,4 +62,52 @@ public class ProductInMemoryRepositoryImpl implements ProductRepository {
                 .map(ProductMapper::toProduct)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public Product save(Product product) {
+        ProductEntity productEntity = ProductMapper.toProductEntity(product);
+        ProductEntity savedEntity;
+
+        if(productEntity.getId() == null || table.get(productEntity.getId()) == null) {
+            Long newId = idGenerator.incrementAndGet();
+            savedEntity = ProductEntity.builder()
+                    .id(newId)
+                    .name(productEntity.getName())
+                    .description(productEntity.getDescription())
+                    .price(productEntity.getPrice())
+                    .stock(productEntity.getStock())
+                    .build();
+
+            table.put(newId, savedEntity);
+        } else {
+            table.put(productEntity.getId(), productEntity);
+            savedEntity = productEntity;
+        }
+
+        return ProductMapper.toProduct(savedEntity);
+    }
+
+    @Override
+    public List<Product> saveAll(List<Product> productList) {
+        if (productList == null || productList.isEmpty()) {
+            return List.of();
+        }
+
+        return productList.stream()
+                .map(this::save)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Product> findAllById(List<Long> ids) {
+        if(ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+
+        return ids.stream()
+                .map(table::get)
+                .filter(productEntity -> productEntity != null)
+                .map(ProductMapper::toProduct)
+                .collect(Collectors.toList());
+    }
 }
