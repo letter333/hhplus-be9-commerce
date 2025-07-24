@@ -7,9 +7,11 @@ import kr.hhplus.be.server.infrastructure.mapper.ProductMapper;
 import org.springframework.stereotype.Repository;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 @Repository
 public class ProductInMemoryRepositoryImpl implements ProductRepository {
@@ -52,5 +54,12 @@ public class ProductInMemoryRepositoryImpl implements ProductRepository {
     public Optional<Product> findById(Long id) {
         return Optional.ofNullable(table.get(id))
                 .map(ProductMapper::toProduct);
+    }
+
+    @Override
+    public List<Product> findAll() {
+        return table.values().stream()
+                .map(ProductMapper::toProduct)
+                .collect(Collectors.toList());
     }
 }

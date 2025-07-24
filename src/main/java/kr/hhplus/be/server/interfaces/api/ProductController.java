@@ -5,9 +5,11 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import kr.hhplus.be.server.application.usecase.ProductGetListUseCase;
 import kr.hhplus.be.server.application.usecase.ProductGetUseCase;
 import kr.hhplus.be.server.common.response.CommonResponse;
 import kr.hhplus.be.server.domain.model.Product;
+import kr.hhplus.be.server.interfaces.dto.response.ProductListResponse;
 import kr.hhplus.be.server.interfaces.dto.response.ProductResponse;
 import kr.hhplus.be.server.mock.common.Response;
 import lombok.RequiredArgsConstructor;
@@ -15,10 +17,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 public class ProductController {
     private final ProductGetUseCase productGetUseCase;
+    private final ProductGetListUseCase productGetListUseCase;
 
     @Operation(summary = "단일 상품 조회", description = "상품 ID를 이용해 조회")
     @ApiResponse(
@@ -51,6 +56,13 @@ public class ProductController {
         Product product = productGetUseCase.execute(id);
         ProductResponse productResponse = toProductResponse(product);
         return CommonResponse.ok(productResponse);
+    }
+
+    @GetMapping("/api/v1/products")
+    public CommonResponse<ProductListResponse> getProductList() {
+        List<Product> products = productGetListUseCase.execute();
+
+        return CommonResponse.ok(new ProductListResponse(products));
     }
 
     public ProductResponse toProductResponse(Product product) {
