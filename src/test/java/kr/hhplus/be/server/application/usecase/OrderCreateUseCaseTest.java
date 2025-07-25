@@ -70,7 +70,7 @@ class OrderCreateUseCaseTest {
 
     @Test
     @DisplayName("존재하지 않는 상품이면 예외 처리")
-    void 존재하지_않는_상품_조회() {
+    void 존재하지_않는_상품_주문() {
         // given
         Long userId = 1L;
         List<OrderProduct> orderProductList = List.of(new OrderProduct(1L, 1111L, 1, 1000L));
