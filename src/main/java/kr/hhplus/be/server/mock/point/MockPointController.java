@@ -42,32 +42,32 @@ public class MockPointController {
         return Response.ok("포인트 조회 성공", new PointResponse(1L, 100000L));
     }
 
-    @Operation(summary = "잔액 충전", description = "사용자 ID를 이용해 잔액 충전")
-    @ApiResponse(
-            responseCode = "200",
-            description = "충전 성공",
-            content = @Content(
-                    schema = @Schema(implementation = Response.class),
-                    examples = @ExampleObject(
-                            name = "포인트 충전 예시",
-                            value = """
-                {
-                    "code": "OK",
-                    "message": "포인트 충전 완료",
-                    "data": {
-                        "id": 1,
-                        "amount": 100000
-                    }
-                }
-                """
-                    )
-            )
-    )
-    @PostMapping(value = "/api/v1/users/{id}/points")
-    public Response<ChargePointResponse> charge(
-            @Parameter(description = "사용자 ID", required = true, example = "1") @PathVariable Long id,
-            @RequestBody ChargePointRequest chargePointRequest
-    ) {
-        return Response.ok("포인트 충전 완료", new ChargePointResponse(1L, 100000L));
-    }
+//    @Operation(summary = "잔액 충전", description = "사용자 ID를 이용해 잔액 충전")
+//    @ApiResponse(
+//            responseCode = "200",
+//            description = "충전 성공",
+//            content = @Content(
+//                    schema = @Schema(implementation = Response.class),
+//                    examples = @ExampleObject(
+//                            name = "포인트 충전 예시",
+//                            value = """
+//                {
+//                    "code": "OK",
+//                    "message": "포인트 충전 완료",
+//                    "data": {
+//                        "id": 1,
+//                        "amount": 100000
+//                    }
+//                }
+//                """
+//                    )
+//            )
+//    )
+//    @PostMapping(value = "/api/v1/users/{id}/points")
+//    public Response<ChargePointResponse> charge(
+//            @Parameter(description = "사용자 ID", required = true, example = "1") @PathVariable Long id,
+//            @RequestBody ChargePointRequest chargePointRequest
+//    ) {
+//        return Response.ok("포인트 충전 완료", new ChargePointResponse(1L, 100000L));
+//    }
 }
