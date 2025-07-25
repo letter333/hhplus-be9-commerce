@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.application.usecase;
 
+import kr.hhplus.be.server.application.usecase.dto.OrderCreateCommand;
 import kr.hhplus.be.server.domain.model.*;
 import kr.hhplus.be.server.domain.repository.OrderRepository;
 import kr.hhplus.be.server.domain.repository.ProductRepository;
@@ -15,16 +16,7 @@ public class OrderCreateUseCase {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
 
-    public record OrderCreateRequest(
-            Long userId,
-            List<OrderProduct> orderProductList,
-            Address shippingAddress,
-            String recipientNumber
-    ) {
-
-    }
-
-    public Order execute(OrderCreateRequest request) {
+    public Order execute(OrderCreateCommand request) {
         List<Product> toUpdateProducts = new ArrayList<>();
         Long totalPrice = 0L;
 

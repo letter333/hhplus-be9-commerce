@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import kr.hhplus.be.server.application.usecase.OrderCreateUseCase;
+import kr.hhplus.be.server.application.usecase.dto.OrderCreateCommand;
 import kr.hhplus.be.server.common.response.CommonResponse;
 import kr.hhplus.be.server.domain.model.Order;
 import kr.hhplus.be.server.interfaces.dto.request.OrderCreateRequest;
@@ -55,7 +56,7 @@ public class OrderController {
     public CommonResponse<OrderResponse> create(
             @RequestBody OrderCreateRequest orderCreateRequest
     ) {
-        OrderCreateUseCase.OrderCreateRequest command = new OrderCreateUseCase.OrderCreateRequest(
+        OrderCreateCommand command = new OrderCreateCommand(
                 orderCreateRequest.userId(),
                 orderCreateRequest.orderProductList(),
                 orderCreateRequest.shippingAddress(),
