@@ -7,6 +7,7 @@ import kr.hhplus.be.server.domain.repository.PaymentRepository;
 import kr.hhplus.be.server.domain.repository.PointRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -15,22 +16,33 @@ public class PaymentProcessUseCase {
     private final OrderRepository orderRepository;
     private final PointRepository pointRepository;
 
+    @Transactional
     public Payment execute(PaymentProcessCommand command) {
         Order order = orderRepository.findById(command.orderId())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 주문 정보입니다."));
 
+        PaymentStatus paymentStatus = PaymentStatus.FAILED;
+
         if(order.getStatus() == OrderStatus.PENDING) {
-            if(command.paymentMethod() == PaymentMethod.POINT) {
-                Point point = pointRepository.findByUserId(command.userId()).orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
+            try {
+                if(command.paymentMethod() == PaymentMethod.POINT) {
+                    Point point = pointRepository.findByUserId(command.userId()).orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
 
-                point.use(order.getFinalPrice());
+                    point.use(order.getFinalPrice());
 
-                pointRepository.save(point);
+                    pointRepository.save(point);
+
+                } else if (command.paymentMethod() == PaymentMethod.CARD) {
+                    //카드 결제 (외부 PG연동)
+                }
 
                 order.changeStatus(OrderStatus.PAID);
                 orderRepository.save(order);
-            } else if (command.paymentMethod() == PaymentMethod.CARD) {
-                //카드 결제 (외부 PG연동)
+                paymentStatus = PaymentStatus.SUCCESS;
+            } catch (IllegalArgumentException ex) {
+
+            } catch (Exception ex) {
+
             }
         }
 
@@ -38,7 +50,7 @@ public class PaymentProcessUseCase {
                 .orderId(order.getId())
                 .paymentMethod(command.paymentMethod())
                 .amount(order.getFinalPrice())
-                .status(PaymentStatus.SUCCESS)
+                .status(paymentStatus)
                 .build();
 
         return paymentRepository.save(payment);
