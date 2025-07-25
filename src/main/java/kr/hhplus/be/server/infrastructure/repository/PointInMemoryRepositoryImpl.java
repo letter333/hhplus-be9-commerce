@@ -16,6 +16,20 @@ public class PointInMemoryRepositoryImpl implements PointRepository {
     private final Map<Long, PointEntity> table = new HashMap<>();
     private final AtomicLong idGenerator = new AtomicLong(0);
 
+    public PointInMemoryRepositoryImpl() {
+        initTable();
+    }
+
+    public void initTable() {
+        if(table.isEmpty()) {
+            table.put(1L, PointEntity.builder()
+                    .id(1L)
+                    .userId(1L)
+                    .balance(1000L)
+                    .build());
+        }
+    }
+
     @Override
     public Point save(Point point) {
         PointEntity pointEntity = PointMapper.toPointEntity(point);
