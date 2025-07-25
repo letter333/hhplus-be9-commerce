@@ -92,9 +92,10 @@ class PaymentProcessUseCaseTest {
     }
 
     @Test
-    @DisplayName("포인트 부족 시 예외 처리")
+    @DisplayName("포인트 부족 시 결제 실패")
     void 포인트_부족() {
         // given
+        long paymentId = 1L;
         long userId = 1L;
         long orderId = 1L;
         long finalPrice = 50000L;
@@ -103,17 +104,21 @@ class PaymentProcessUseCaseTest {
 
         Order mockOrder = Order.builder().id(orderId).userId(userId).status(OrderStatus.PENDING).finalPrice(finalPrice).build();
         Point mockPoint = Point.builder().userId(userId).amount(insufficientPoints).build();
+        Payment mockPayment = Payment.builder().id(paymentId).orderId(orderId).paymentMethod(PaymentMethod.POINT).amount(finalPrice).status(PaymentStatus.FAILED).build();
 
         given(orderRepository.findById(orderId)).willReturn(Optional.of(mockOrder));
         given(pointRepository.findByUserId(userId)).willReturn(Optional.of(mockPoint));
+        given(paymentRepository.save(any(Payment.class))).willReturn(mockPayment);
 
-        // when & then
-        assertThatThrownBy(() -> paymentProcessUseCase.execute(command))
-                .isInstanceOf(IllegalArgumentException.class);
+        // when
+        Payment resultPayment = paymentProcessUseCase.execute(command);
 
-        then(paymentRepository).should(never()).save(any());
-        then(orderRepository).should(never()).save(any());
-        then(pointRepository).should(never()).save(any());
+        //then
+        assertThat(resultPayment).isNotNull();
+        assertThat(resultPayment.getId()).isNotNull();
+        assertThat(resultPayment.getAmount()).isEqualTo(finalPrice);
+        assertThat(resultPayment.getPaymentMethod()).isEqualTo(PaymentMethod.POINT);
+        assertThat(resultPayment.getStatus()).isEqualTo(PaymentStatus.FAILED);
     }
 
 }
