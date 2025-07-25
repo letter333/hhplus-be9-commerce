@@ -1,0 +1,119 @@
+package kr.hhplus.be.server.application.usecase;
+
+import kr.hhplus.be.server.application.usecase.dto.PaymentProcessCommand;
+import kr.hhplus.be.server.domain.model.*;
+import kr.hhplus.be.server.domain.repository.OrderRepository;
+import kr.hhplus.be.server.domain.repository.PaymentRepository;
+import kr.hhplus.be.server.domain.repository.PointRepository;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
+
+import static org.mockito.BDDMockito.*;
+import static org.assertj.core.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.*;
+
+@ExtendWith(MockitoExtension.class)
+class PaymentProcessUseCaseTest {
+    @Mock
+    private PaymentRepository paymentRepository;
+
+    @Mock
+    private OrderRepository orderRepository;
+
+    @Mock
+    private PointRepository pointRepository;
+
+    @InjectMocks
+    private PaymentProcessUseCase paymentProcessUseCase;
+
+    @Test
+    @DisplayName("포인트 결제 성공")
+    void 포인트_결제() {
+        // given
+        long userId = 1L;
+        long orderId = 1L;
+        long finalPrice = 50000L;
+        long initialPoints = 100000L;
+        PaymentProcessCommand command = new PaymentProcessCommand(userId, orderId, PaymentMethod.POINT);
+
+        Order mockOrder = Order.builder()
+                .id(orderId)
+                .userId(userId)
+                .status(OrderStatus.PENDING)
+                .finalPrice(finalPrice)
+                .build();
+
+        Point mockPoint = Point.builder()
+                .userId(userId)
+                .amount(initialPoints)
+                .build();
+
+        given(orderRepository.findById(orderId)).willReturn(Optional.of(mockOrder));
+        given(pointRepository.findByUserId(userId)).willReturn(Optional.of(mockPoint));
+        given(paymentRepository.save(any(Payment.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+        // when
+        Payment resultPayment = paymentProcessUseCase.execute(command);
+
+        // then
+        assertThat(resultPayment.getStatus()).isEqualTo(PaymentStatus.SUCCESS);
+        assertThat(resultPayment.getAmount()).isEqualTo(finalPrice);
+        assertThat(mockOrder.getStatus()).isEqualTo(OrderStatus.PAID);
+        assertThat(mockPoint.getAmount()).isEqualTo(initialPoints - finalPrice);
+
+        then(orderRepository).should().findById(orderId);
+        then(pointRepository).should().findByUserId(userId);
+        then(pointRepository).should().save(mockPoint);
+        then(orderRepository).should().save(mockOrder);
+        then(paymentRepository).should().save(any(Payment.class));
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 주문 결제 시 예외 처리")
+    void 존재하지_않는_주문_결제() {
+        // given
+        long nonExistentOrderId = 999L;
+        PaymentProcessCommand command = new PaymentProcessCommand(1L, nonExistentOrderId, PaymentMethod.POINT);
+        given(orderRepository.findById(nonExistentOrderId)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> paymentProcessUseCase.execute(command))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        then(paymentRepository).should(never()).save(any());
+        then(orderRepository).should(never()).save(any());
+        then(pointRepository).should(never()).save(any());
+    }
+
+    @Test
+    @DisplayName("포인트 부족 시 예외 처리")
+    void 포인트_부족() {
+        // given
+        long userId = 1L;
+        long orderId = 1L;
+        long finalPrice = 50000L;
+        long insufficientPoints = 40000L;
+        PaymentProcessCommand command = new PaymentProcessCommand(userId, orderId, PaymentMethod.POINT);
+
+        Order mockOrder = Order.builder().id(orderId).userId(userId).status(OrderStatus.PENDING).finalPrice(finalPrice).build();
+        Point mockPoint = Point.builder().userId(userId).amount(insufficientPoints).build();
+
+        given(orderRepository.findById(orderId)).willReturn(Optional.of(mockOrder));
+        given(pointRepository.findByUserId(userId)).willReturn(Optional.of(mockPoint));
+
+        // when & then
+        assertThatThrownBy(() -> paymentProcessUseCase.execute(command))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        then(paymentRepository).should(never()).save(any());
+        then(orderRepository).should(never()).save(any());
+        then(pointRepository).should(never()).save(any());
+    }
+
+}
