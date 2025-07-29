@@ -1,6 +1,6 @@
 package kr.hhplus.be.server.application.usecase;
 
-import kr.hhplus.be.server.application.usecase.dto.PaymentProcessCommand;
+import kr.hhplus.be.server.application.usecase.dto.command.PaymentProcessCommand;
 import kr.hhplus.be.server.domain.model.*;
 import kr.hhplus.be.server.domain.repository.OrderRepository;
 import kr.hhplus.be.server.domain.repository.PaymentRepository;
@@ -16,7 +16,6 @@ import java.util.Optional;
 
 import static org.mockito.BDDMockito.*;
 import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 class PaymentProcessUseCaseTest {

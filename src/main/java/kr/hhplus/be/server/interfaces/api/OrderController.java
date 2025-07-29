@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import kr.hhplus.be.server.application.usecase.OrderCreateUseCase;
-import kr.hhplus.be.server.application.usecase.dto.OrderCreateCommand;
+import kr.hhplus.be.server.application.usecase.dto.command.OrderCreateCommand;
 import kr.hhplus.be.server.common.response.CommonResponse;
 import kr.hhplus.be.server.domain.model.Order;
 import kr.hhplus.be.server.interfaces.dto.request.OrderCreateRequest;

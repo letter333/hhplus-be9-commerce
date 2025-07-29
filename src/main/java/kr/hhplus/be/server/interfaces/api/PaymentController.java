@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import kr.hhplus.be.server.application.usecase.PaymentProcessUseCase;
-import kr.hhplus.be.server.application.usecase.dto.PaymentProcessCommand;
+import kr.hhplus.be.server.application.usecase.dto.command.PaymentProcessCommand;
 import kr.hhplus.be.server.common.response.CommonResponse;
 import kr.hhplus.be.server.domain.model.Payment;
 import kr.hhplus.be.server.interfaces.dto.request.PaymentProcessRequest;

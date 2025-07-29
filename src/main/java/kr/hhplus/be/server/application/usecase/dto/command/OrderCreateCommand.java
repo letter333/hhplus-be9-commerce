@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.application.usecase.dto;
+package kr.hhplus.be.server.application.usecase.dto.command;
 
 import kr.hhplus.be.server.domain.model.Address;
 import kr.hhplus.be.server.domain.model.OrderProduct;

@@ -1,6 +1,6 @@
 package kr.hhplus.be.server.application.usecase;
 
-import kr.hhplus.be.server.application.usecase.dto.PaymentProcessCommand;
+import kr.hhplus.be.server.application.usecase.dto.command.PaymentProcessCommand;
 import kr.hhplus.be.server.domain.model.*;
 import kr.hhplus.be.server.domain.repository.OrderRepository;
 import kr.hhplus.be.server.domain.repository.PaymentRepository;
@@ -44,6 +44,8 @@ public class PaymentProcessUseCase {
             } catch (Exception ex) {
 
             }
+        } else if(order.getStatus() == OrderStatus.PAID) {
+            throw new IllegalArgumentException("이미 결제된 주문입니다.");
         }
 
         Payment payment = Payment.builder()
