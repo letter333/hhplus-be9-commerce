@@ -1,6 +1,6 @@
 package kr.hhplus.be.server.application.usecase;
 
-import kr.hhplus.be.server.application.usecase.dto.OrderCreateCommand;
+import kr.hhplus.be.server.application.usecase.dto.command.OrderCreateCommand;
 import kr.hhplus.be.server.domain.model.*;
 import kr.hhplus.be.server.domain.repository.OrderRepository;
 import kr.hhplus.be.server.domain.repository.ProductRepository;

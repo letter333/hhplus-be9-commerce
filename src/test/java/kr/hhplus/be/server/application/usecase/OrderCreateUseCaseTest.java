@@ -1,6 +1,6 @@
 package kr.hhplus.be.server.application.usecase;
 
-import kr.hhplus.be.server.application.usecase.dto.OrderCreateCommand;
+import kr.hhplus.be.server.application.usecase.dto.command.OrderCreateCommand;
 import kr.hhplus.be.server.domain.model.Address;
 import kr.hhplus.be.server.domain.model.Order;
 import kr.hhplus.be.server.domain.model.OrderProduct;
@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.BDDMockito.*;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.assertj.core.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
