@@ -15,17 +15,11 @@ import kr.hhplus.be.server.domain.model.UserCoupon;
 import kr.hhplus.be.server.interfaces.dto.request.CouponIssueRequest;
 import kr.hhplus.be.server.interfaces.dto.response.CouponIssueResponse;
 import kr.hhplus.be.server.mock.common.Response;
-import kr.hhplus.be.server.mock.coupon.dto.CouponResponse;
-import kr.hhplus.be.server.mock.coupon.dto.IssueCouponRequest;
-import kr.hhplus.be.server.mock.coupon.dto.IssueCouponResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 
 @RestController
 @RequiredArgsConstructor
