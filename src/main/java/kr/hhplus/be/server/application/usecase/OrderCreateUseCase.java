@@ -78,36 +78,5 @@ public class OrderCreateUseCase {
                 acquiredLocks.get(i).unlock();
             }
         }
-//
-//
-//        List<Product> toUpdateProducts = new ArrayList<>();
-//        Long totalPrice = 0L;
-//
-//        for (OrderProduct orderProduct : command.orderProductList()) {
-//            Product product = productRepository.findById(orderProduct.getProductId())
-//                    .orElseThrow(() -> new IllegalArgumentException(
-//                            "존재하지 않는 상품입니다. 상품ID=" + orderProduct.getProductId()
-//                    ));
-//
-//            product.decreaseStock(orderProduct.getQuantity());
-//            toUpdateProducts.add(product);
-//            totalPrice += product.getPrice() * orderProduct.getQuantity();
-//        }
-//        productRepository.saveAll(toUpdateProducts);
-//
-//        Long discountAmount = 0L;
-//        Long finalPrice = totalPrice - discountAmount;
-//
-//        Order order = Order.builder()
-//                .userId(command.userId())
-//                .status(OrderStatus.PENDING)
-//                .orderProducts(command.orderProductList())
-//                .totalPrice(totalPrice)
-//                .finalPrice(finalPrice)
-//                .shippingAddress(command.shippingAddress())
-//                .recipientNumber(command.recipientNumber())
-//                .build();
-//
-//        return orderRepository.save(order);
     }
 }
