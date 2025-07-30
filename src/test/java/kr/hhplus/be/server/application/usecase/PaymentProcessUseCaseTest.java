@@ -50,7 +50,7 @@ class PaymentProcessUseCaseTest {
 
         Point mockPoint = Point.builder()
                 .userId(userId)
-                .amount(initialPoints)
+                .balance(initialPoints)
                 .build();
 
         given(orderRepository.findById(orderId)).willReturn(Optional.of(mockOrder));
@@ -64,7 +64,7 @@ class PaymentProcessUseCaseTest {
         assertThat(resultPayment.getStatus()).isEqualTo(PaymentStatus.SUCCESS);
         assertThat(resultPayment.getAmount()).isEqualTo(finalPrice);
         assertThat(mockOrder.getStatus()).isEqualTo(OrderStatus.PAID);
-        assertThat(mockPoint.getAmount()).isEqualTo(initialPoints - finalPrice);
+        assertThat(mockPoint.getBalance()).isEqualTo(initialPoints - finalPrice);
 
         then(orderRepository).should().findById(orderId);
         then(pointRepository).should().findByUserId(userId);
@@ -109,7 +109,7 @@ class PaymentProcessUseCaseTest {
         long insufficientPoints = 40_000L;
         Point mockPoint = Point.builder()
                 .userId(userId)
-                .amount(insufficientPoints)
+                .balance(insufficientPoints)
                 .build();
 
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(mockOrder));

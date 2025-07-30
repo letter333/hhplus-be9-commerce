@@ -32,13 +32,13 @@ class PointChargeUseCaseTest {
         Point point = Point.builder()
                 .id(1L)
                 .userId(userId)
-                .amount(0L)
+                .balance(0L)
                 .build();
 
         Point savedPoint = point.builder()
                 .id(1L)
                 .userId(userId)
-                .amount(chargeAmount)
+                .balance(chargeAmount)
                 .build();
 
         when(pointRepository.findByUserId(userId)).thenReturn(Optional.of(point));
@@ -49,7 +49,7 @@ class PointChargeUseCaseTest {
 
         //then
         assertThat(result.getUserId()).isEqualTo(userId);
-        assertThat(result.getAmount()).isEqualTo(chargeAmount);
+        assertThat(result.getBalance()).isEqualTo(chargeAmount);
 
         verify(pointRepository).findByUserId(userId);
         verify(pointRepository).save(point);
@@ -94,7 +94,7 @@ class PointChargeUseCaseTest {
         Point existingPoint = Point.builder()
                 .id(1L)
                 .userId(userId)
-                .amount(0L)
+                .balance(0L)
                 .build();
 
         given(pointRepository.findByUserId(userId)).willReturn(Optional.of(existingPoint));
@@ -117,7 +117,7 @@ class PointChargeUseCaseTest {
         Point existingPoint = Point.builder()
                 .id(1L)
                 .userId(userId)
-                .amount(9_500_000L)
+                .balance(9_500_000L)
                 .build();
 
         given(pointRepository.findByUserId(userId)).willReturn(Optional.of(existingPoint));
@@ -139,7 +139,7 @@ class PointChargeUseCaseTest {
         Point existingPoint = Point.builder()
                 .id(1L)
                 .userId(userId)
-                .amount(1000L)
+                .balance(1000L)
                 .build();
 
         given(pointRepository.findByUserId(userId)).willReturn(Optional.of(existingPoint));

@@ -26,7 +26,7 @@ class PointTest {
             point.charge(chargeAmount);
 
             //then
-            assertThat(point.getAmount()).isEqualTo(expectedAmount);
+            assertThat(point.getBalance()).isEqualTo(expectedAmount);
         }
 
         @ParameterizedTest()
@@ -57,7 +57,7 @@ class PointTest {
             point.use(useAmount);
 
             //then
-            assertThat(point.getAmount()).isEqualTo(expectedAmount);
+            assertThat(point.getBalance()).isEqualTo(expectedAmount);
         }
 
         @ParameterizedTest()
