@@ -1,6 +1,6 @@
 package kr.hhplus.be.server.mock.coupon.dto;
 
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 
 public record IssueCouponResponse(
         Long id,
@@ -10,7 +10,7 @@ public record IssueCouponResponse(
         Long amount,
         Long percentage,
         CouponResponse.status status,
-        ZonedDateTime expiredAt,
-        ZonedDateTime createdAt
+        LocalDateTime expiredAt,
+        LocalDateTime createdAt
 ) {
 }

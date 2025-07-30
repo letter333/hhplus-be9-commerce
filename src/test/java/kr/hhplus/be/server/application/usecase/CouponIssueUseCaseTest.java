@@ -15,7 +15,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -54,7 +54,7 @@ class CouponIssueUseCaseTest {
                     .discountPercentage(10L)
                     .quantity(500)
                     .issuedQuantity(0)
-                    .expiredAt(ZonedDateTime.now().plusDays(30))
+                    .expiredAt(LocalDateTime.now().plusDays(30))
                     .build();
             UserCoupon userCoupon = UserCoupon.builder()
                     .id(1L)
@@ -62,7 +62,7 @@ class CouponIssueUseCaseTest {
                     .couponId(couponId)
                     .couponCode("ABCD-1234-5678-0123")
                     .status(UserCouponStatus.ISSUED)
-                    .expiredAt(ZonedDateTime.now().plusDays(30))
+                    .expiredAt(LocalDateTime.now().plusDays(30))
                     .build();
 
             when(couponRepository.findById(couponId)).thenReturn(Optional.of(coupon));
@@ -122,7 +122,7 @@ class CouponIssueUseCaseTest {
                     .discountPercentage(10L)
                     .quantity(500)
                     .issuedQuantity(500)
-                    .expiredAt(ZonedDateTime.now().plusDays(30))
+                    .expiredAt(LocalDateTime.now().plusDays(30))
                     .build();
 
             when(couponRepository.findById(couponId)).thenReturn(Optional.of(soldOutCoupon));
@@ -153,7 +153,7 @@ class CouponIssueUseCaseTest {
                     .discountPercentage(10L)
                     .quantity(100)
                     .issuedQuantity(50)
-                    .expiredAt(ZonedDateTime.now().minusDays(1))
+                    .expiredAt(LocalDateTime.now().minusDays(1))
                     .build();
 
             when(couponRepository.findById(couponId)).thenReturn(Optional.of(expiredCoupon));
@@ -181,7 +181,7 @@ class CouponIssueUseCaseTest {
                     .discountPercentage(10L)
                     .quantity(100)
                     .issuedQuantity(50)
-                    .expiredAt(ZonedDateTime.now().plusDays(30))
+                    .expiredAt(LocalDateTime.now().plusDays(30))
                     .build();
 
             when(couponRepository.findById(couponId)).thenReturn(Optional.of(mockCoupon));
@@ -219,7 +219,7 @@ class CouponIssueUseCaseTest {
                     .discountPercentage(10L)
                     .quantity(500)
                     .issuedQuantity(0)
-                    .expiredAt(ZonedDateTime.now().plusDays(30))
+                    .expiredAt(LocalDateTime.now().plusDays(30))
                     .build();
 
             when(couponRepository.findById(couponId)).thenReturn(Optional.of(mockCoupon));

@@ -3,7 +3,7 @@ package kr.hhplus.be.server.domain.model;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 
 @Getter
 public class Coupon {
@@ -14,10 +14,10 @@ public class Coupon {
     Long discountPercentage;
     int quantity;
     int issuedQuantity;
-    ZonedDateTime expiredAt;
+    LocalDateTime expiredAt;
 
     @Builder
-    public Coupon(Long id, String name, CouponType type, Long discountAmount, Long discountPercentage, int quantity, int issuedQuantity, ZonedDateTime expiredAt) {
+    public Coupon(Long id, String name, CouponType type, Long discountAmount, Long discountPercentage, int quantity, int issuedQuantity, LocalDateTime expiredAt) {
         this.id = id;
         this.name = name;
         this.type = type;
@@ -34,7 +34,7 @@ public class Coupon {
     }
 
     public void validateIssue() {
-        if(this.expiredAt != null && ZonedDateTime.now().isAfter(this.expiredAt)) {
+        if(this.expiredAt != null && LocalDateTime.now().isAfter(this.expiredAt)) {
             throw new IllegalArgumentException("이미 만료된 쿠폰입니다.");
         }
 

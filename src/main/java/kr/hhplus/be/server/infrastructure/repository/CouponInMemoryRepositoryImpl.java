@@ -7,8 +7,7 @@ import kr.hhplus.be.server.infrastructure.entity.CouponEntity;
 import kr.hhplus.be.server.infrastructure.mapper.CouponMapper;
 import org.springframework.stereotype.Repository;
 
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,7 +33,7 @@ public class CouponInMemoryRepositoryImpl implements CouponRepository {
                 .type(CouponType.PERCENTAGE)
                 .discountPercentage(10L)
                 .quantity(1000)
-                .expiredAt(ZonedDateTime.of(2025, 8, 31, 23, 59, 59, 0, ZoneId.of("Asia/Seoul")))
+                .expiredAt(LocalDateTime.of(2025, 8, 31, 23, 59, 59, 0))
                 .build();
         table.put(1L, couponEntity);
         lockMap.put(1L, new ReentrantLock(true));

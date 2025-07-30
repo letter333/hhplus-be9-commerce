@@ -4,7 +4,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -27,7 +27,7 @@ class CouponTest {
                     .discountPercentage(10L)
                     .quantity(100)
                     .issuedQuantity(0)
-                    .expiredAt(ZonedDateTime.now().plusDays(30))
+                    .expiredAt(LocalDateTime.now().plusDays(30))
                     .build();
 
             // when
@@ -48,7 +48,7 @@ class CouponTest {
                     .discountPercentage(10L)
                     .quantity(100)
                     .issuedQuantity(0)
-                    .expiredAt(ZonedDateTime.now().minusDays(30))
+                    .expiredAt(LocalDateTime.now().minusDays(30))
                     .build();
 
             // when & then
@@ -67,7 +67,7 @@ class CouponTest {
                     .discountPercentage(10L)
                     .quantity(100)
                     .issuedQuantity(100)
-                    .expiredAt(ZonedDateTime.now().minusDays(30))
+                    .expiredAt(LocalDateTime.now().minusDays(30))
                     .build();
 
             // when & then

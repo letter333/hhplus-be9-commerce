@@ -4,7 +4,7 @@ import kr.hhplus.be.server.domain.model.UserCouponStatus;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 
 @Getter
 public class UserCouponEntity extends BaseEntity{
@@ -13,11 +13,11 @@ public class UserCouponEntity extends BaseEntity{
     private Long couponId;
     String couponCode;
     UserCouponStatus status;
-    ZonedDateTime usedAt;
-    ZonedDateTime expiredAt;
+    LocalDateTime usedAt;
+    LocalDateTime expiredAt;
 
     @Builder
-    public UserCouponEntity(Long id, Long userId, Long couponId, String couponCode, UserCouponStatus status, ZonedDateTime usedAt, ZonedDateTime expiredAt) {
+    public UserCouponEntity(Long id, Long userId, Long couponId, String couponCode, UserCouponStatus status, LocalDateTime usedAt, LocalDateTime expiredAt) {
         this.id = id;
         this.userId = userId;
         this.couponId = couponId;

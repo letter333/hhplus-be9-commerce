@@ -3,7 +3,7 @@ package kr.hhplus.be.server.domain.model;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -17,10 +17,10 @@ public class Order {
     private Long finalPrice;
     private Address shippingAddress;
     private String recipientNumber;
-    private ZonedDateTime createdAt;
+    private LocalDateTime createdAt;
 
     @Builder
-    public Order(Long id, Long userId, OrderStatus status, List<OrderProduct> orderProducts, Long totalPrice, Long discountAmount, Long finalPrice, Address shippingAddress, String recipientNumber, ZonedDateTime createdAt) {
+    public Order(Long id, Long userId, OrderStatus status, List<OrderProduct> orderProducts, Long totalPrice, Long discountAmount, Long finalPrice, Address shippingAddress, String recipientNumber, LocalDateTime createdAt) {
         this.id = id;
         this.userId = userId;
         this.status = status;
