@@ -5,6 +5,7 @@ import kr.hhplus.be.server.domain.model.*;
 import kr.hhplus.be.server.domain.repository.OrderRepository;
 import kr.hhplus.be.server.domain.repository.PaymentRepository;
 import kr.hhplus.be.server.domain.repository.PointRepository;
+import kr.hhplus.be.server.domain.service.ExternalPaymentDataPlatformService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +16,7 @@ public class PaymentProcessUseCase {
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
     private final PointRepository pointRepository;
+    private final ExternalPaymentDataPlatformService externalPaymentDataPlatformService;
 
     @Transactional
     public Payment execute(PaymentProcessCommand command) {
@@ -50,6 +52,9 @@ public class PaymentProcessUseCase {
                 .status(PaymentStatus.SUCCESS)
                 .build();
 
-        return paymentRepository.save(payment);
+        Payment savedPayment = paymentRepository.save(payment);
+        externalPaymentDataPlatformService.sendPaymentInfo(savedPayment);
+
+        return savedPayment;
     }
 }
