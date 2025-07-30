@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "point")
+@Table(name = "points")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PointEntity extends BaseEntity {
