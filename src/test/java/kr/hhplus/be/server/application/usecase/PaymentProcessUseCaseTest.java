@@ -94,30 +94,34 @@ class PaymentProcessUseCaseTest {
     @DisplayName("포인트 부족 시 결제 실패")
     void 포인트_부족() {
         // given
-        long paymentId = 1L;
         long userId = 1L;
         long orderId = 1L;
-        long finalPrice = 50000L;
-        long insufficientPoints = 40000L;
         PaymentProcessCommand command = new PaymentProcessCommand(userId, orderId, PaymentMethod.POINT);
 
-        Order mockOrder = Order.builder().id(orderId).userId(userId).status(OrderStatus.PENDING).finalPrice(finalPrice).build();
-        Point mockPoint = Point.builder().userId(userId).amount(insufficientPoints).build();
-        Payment mockPayment = Payment.builder().id(paymentId).orderId(orderId).paymentMethod(PaymentMethod.POINT).amount(finalPrice).status(PaymentStatus.FAILED).build();
+        long finalPrice = 50_000L;
+        Order mockOrder = Order.builder()
+                .id(orderId)
+                .userId(userId)
+                .status(OrderStatus.PENDING)
+                .finalPrice(finalPrice)
+                .build();
 
-        given(orderRepository.findById(orderId)).willReturn(Optional.of(mockOrder));
-        given(pointRepository.findByUserId(userId)).willReturn(Optional.of(mockPoint));
-        given(paymentRepository.save(any(Payment.class))).willReturn(mockPayment);
+        long insufficientPoints = 40_000L;
+        Point mockPoint = Point.builder()
+                .userId(userId)
+                .amount(insufficientPoints)
+                .build();
 
-        // when
-        Payment resultPayment = paymentProcessUseCase.execute(command);
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(mockOrder));
+        when(pointRepository.findByUserId(userId)).thenReturn(Optional.of(mockPoint));
 
-        //then
-        assertThat(resultPayment).isNotNull();
-        assertThat(resultPayment.getId()).isNotNull();
-        assertThat(resultPayment.getAmount()).isEqualTo(finalPrice);
-        assertThat(resultPayment.getPaymentMethod()).isEqualTo(PaymentMethod.POINT);
-        assertThat(resultPayment.getStatus()).isEqualTo(PaymentStatus.FAILED);
+        // when & then
+        assertThatThrownBy(() -> paymentProcessUseCase.execute(command))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        // then
+        verify(pointRepository, never()).save(any(Point.class));
+        verify(orderRepository, never()).save(any(Order.class));
+        verify(paymentRepository, never()).save(any(Payment.class));
     }
-
 }
