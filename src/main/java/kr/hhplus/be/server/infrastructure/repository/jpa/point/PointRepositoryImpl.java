@@ -26,8 +26,7 @@ public class PointRepositoryImpl implements PointRepository {
 
     @Override
     public Optional<Point> findByUserId(Long userId) {
-        PointEntity pointEntity = pointJpaRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
+        PointEntity pointEntity = pointJpaRepository.findByUserId(userId);
 
         return Optional.ofNullable(PointMapper.toPoint(pointEntity));
     }
