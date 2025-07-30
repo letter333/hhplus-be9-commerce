@@ -9,35 +9,42 @@ import org.springframework.stereotype.Repository;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Repository
 public class CouponInMemoryRepositoryImpl implements CouponRepository {
-    private final Map<Long, CouponEntity> table = new HashMap<>();
+    private final Map<Long, CouponEntity> table = new ConcurrentHashMap<>();
+    private final Map<Long, ReentrantLock> lockMap = new ConcurrentHashMap<>();
     private final AtomicLong idGenerator = new AtomicLong(0);
+    private static final Long LOCK_TIMEOUT_SECONDS = 10L;
 
     public CouponInMemoryRepositoryImpl() {
         initTable();
     }
 
     public void initTable() {
-        table.put(1L, CouponEntity.builder()
+        CouponEntity couponEntity = CouponEntity.builder()
                 .id(1L)
                 .name("쿠폰1")
                 .type(CouponType.PERCENTAGE)
                 .discountPercentage(10L)
                 .quantity(1000)
                 .expiredAt(ZonedDateTime.of(2025, 8, 31, 23, 59, 59, 0, ZoneId.of("Asia/Seoul")))
-                .build());
+                .build();
+        table.put(1L, couponEntity);
+        lockMap.put(1L, new ReentrantLock(true));
     }
 
     @Override
     public Optional<Coupon> findById(Long id) {
         return Optional.ofNullable(table.get(id))
                 .map(CouponMapper::toCoupon);
+
     }
 
     @Override
@@ -59,9 +66,26 @@ public class CouponInMemoryRepositoryImpl implements CouponRepository {
                     .build();
 
             table.put(newId, savedEntity);
+            lockMap.put(newId, new ReentrantLock(true));
         } else {
-            table.put(couponEntity.getId(), couponEntity);
-            savedEntity = couponEntity;
+            ReentrantLock lock = lockMap.computeIfAbsent(couponEntity.getId(), k -> new ReentrantLock(true));
+
+            try {
+                if (lock.tryLock(LOCK_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                    try {
+                        table.put(couponEntity.getId(), couponEntity);
+                        savedEntity = couponEntity;
+                    } finally {
+                        lock.unlock();
+                    }
+                } else {
+                    throw new IllegalStateException("쿠폰 저장 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.");
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("쿠폰 저장 중 문제가 발생했습니다.", e);
+            }
+
         }
 
         return CouponMapper.toCoupon(savedEntity);
