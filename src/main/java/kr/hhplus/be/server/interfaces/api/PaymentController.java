@@ -12,6 +12,7 @@ import kr.hhplus.be.server.common.response.CommonResponse;
 import kr.hhplus.be.server.domain.model.Payment;
 import kr.hhplus.be.server.interfaces.dto.request.PaymentProcessRequest;
 import kr.hhplus.be.server.interfaces.dto.response.PaymentResponse;
+import kr.hhplus.be.server.interfaces.mapper.PaymentResponseMapper;
 import kr.hhplus.be.server.mock.common.Response;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -62,13 +63,7 @@ public class PaymentController {
             );
             Payment payment = paymentProcessUseCase.execute(command);
 
-            PaymentResponse paymentResponse = new PaymentResponse(
-                    payment.getId(),
-                    payment.getOrderId(),
-                    payment.getPaymentMethod(),
-                    payment.getAmount(),
-                    payment.getStatus()
-            );
+            PaymentResponse paymentResponse = PaymentResponseMapper.toPaymentResponse(payment);
 
             return CommonResponse.ok("결제 성공", paymentResponse);
         } catch(IllegalArgumentException e) {
@@ -79,13 +74,7 @@ public class PaymentController {
             );
 
             Payment failedPayment = paymentFailureRecordUseCase.execute(command);
-            PaymentResponse response = new PaymentResponse(
-                    failedPayment.getId(),
-                    failedPayment.getOrderId(),
-                    failedPayment.getPaymentMethod(),
-                    failedPayment.getAmount(),
-                    failedPayment.getStatus()
-            );
+            PaymentResponse response = PaymentResponseMapper.toPaymentResponse(failedPayment);
 
             return CommonResponse.fail(HttpStatus.BAD_REQUEST.value(), "결제에 실패했습니다.", response);
         }
