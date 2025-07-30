@@ -11,7 +11,7 @@ public class OrderMapper {
                 .userId(orderEntity.getUserId())
                 .status(orderEntity.getStatus())
                 .totalPrice(orderEntity.getTotalPrice())
-                .discountPrice(orderEntity.getDiscountAmount())
+                .discountAmount(orderEntity.getDiscountAmount())
                 .finalPrice(orderEntity.getFinalPrice())
                 .shippingAddress(new Address(orderEntity.getShippingAddress1(), orderEntity.getShippingAddress2(), orderEntity.getShippingZipCode()))
                 .recipientNumber(orderEntity.getRecipientNumber())

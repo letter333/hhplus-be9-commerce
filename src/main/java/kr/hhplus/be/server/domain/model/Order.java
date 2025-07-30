@@ -20,13 +20,13 @@ public class Order {
     private ZonedDateTime createdAt;
 
     @Builder
-    public Order(Long id, Long userId, OrderStatus status, List<OrderProduct> orderProducts, Long totalPrice, Long discountPrice, Long finalPrice, Address shippingAddress, String recipientNumber, ZonedDateTime createdAt) {
+    public Order(Long id, Long userId, OrderStatus status, List<OrderProduct> orderProducts, Long totalPrice, Long discountAmount, Long finalPrice, Address shippingAddress, String recipientNumber, ZonedDateTime createdAt) {
         this.id = id;
         this.userId = userId;
         this.status = status;
         this.orderProducts = orderProducts;
         this.totalPrice = totalPrice;
-        this.discountAmount = discountPrice;
+        this.discountAmount = discountAmount;
         this.finalPrice = finalPrice;
         this.shippingAddress = shippingAddress;
         this.recipientNumber = recipientNumber;
