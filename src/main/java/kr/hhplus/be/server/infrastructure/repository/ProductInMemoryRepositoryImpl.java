@@ -99,7 +99,7 @@ public class ProductInMemoryRepositoryImpl implements ProductRepository {
     }
 
     @Override
-    public List<Product> findAllById(List<Long> ids) {
+    public List<Product> findAllByIdIn(List<Long> ids) {
         if(ids == null || ids.isEmpty()) {
             return List.of();
         }
