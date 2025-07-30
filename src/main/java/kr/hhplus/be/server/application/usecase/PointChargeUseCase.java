@@ -20,10 +20,7 @@ public class PointChargeUseCase {
             throw new IllegalArgumentException("충전 금액은 필수입니다.");
         }
 
-        Point point = pointRepository.findByUserId(userId).orElse(Point.builder()
-                .userId(userId)
-                .amount(0L)
-                .build());
+        Point point = pointRepository.findByUserId(userId).orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
 
         point.charge(amount);
 

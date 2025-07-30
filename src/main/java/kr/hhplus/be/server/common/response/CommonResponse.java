@@ -21,4 +21,8 @@ public record CommonResponse<T>(
     public static <T> CommonResponse<T> ok(T data) {
         return new CommonResponse<>(HttpStatus.OK.value(), null, data);
     }
+
+    public static <T> CommonResponse<T> fail(int code, String message, T data) {
+        return  new CommonResponse<>(code, message, data);
+    }
 }

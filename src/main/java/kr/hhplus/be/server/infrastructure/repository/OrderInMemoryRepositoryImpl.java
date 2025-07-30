@@ -1,12 +1,15 @@
 package kr.hhplus.be.server.infrastructure.repository;
 
 import kr.hhplus.be.server.domain.model.Order;
+import kr.hhplus.be.server.domain.model.OrderStatus;
 import kr.hhplus.be.server.domain.repository.OrderRepository;
 import kr.hhplus.be.server.infrastructure.entity.OrderEntity;
 import kr.hhplus.be.server.infrastructure.mapper.OrderMapper;
 import org.springframework.stereotype.Repository;
 
+import java.time.ZonedDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
@@ -20,6 +23,11 @@ public class OrderInMemoryRepositoryImpl implements OrderRepository {
     public Optional<Order> findById(Long id) {
         return Optional.ofNullable(table.get(id))
                 .map(OrderMapper::toOrder);
+    }
+
+    @Override
+    public List<Order> findByStatusAndCreatedAtBefore(OrderStatus status, ZonedDateTime dateTime) {
+        return List.of();
     }
 
     @Override
@@ -49,5 +57,10 @@ public class OrderInMemoryRepositoryImpl implements OrderRepository {
         }
 
         return OrderMapper.toOrder(savedEntity);
+    }
+
+    @Override
+    public List<Order> saveAll(List<Order> orders) {
+        return List.of();
     }
 }
