@@ -30,4 +30,9 @@ public class PointRepositoryImpl implements PointRepository {
 
         return Optional.ofNullable(PointMapper.toPoint(pointEntity));
     }
+
+    @Override
+    public void deleteAll() {
+        pointJpaRepository.deleteAll();
+    }
 }
