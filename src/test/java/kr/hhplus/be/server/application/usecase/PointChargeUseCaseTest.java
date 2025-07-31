@@ -1,6 +1,7 @@
 package kr.hhplus.be.server.application.usecase;
 
 import kr.hhplus.be.server.domain.model.Point;
+import kr.hhplus.be.server.domain.repository.PointHistoryRepository;
 import kr.hhplus.be.server.domain.repository.PointRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,6 +21,10 @@ import static org.assertj.core.api.Assertions.*;
 class PointChargeUseCaseTest {
     @Mock
     private PointRepository pointRepository;
+
+    @Mock
+    private PointHistoryRepository pointHistoryRepository;
+
     @InjectMocks
     private PointChargeUseCase pointChargeUseCase;
 
