@@ -7,4 +7,6 @@ import java.util.List;
 public interface OrderProductRepository {
     List<OrderProduct> findByOrderId(Long orderId);
     List<OrderProduct> findByOrderIdIn(List<Long> orderIds);
+    List<OrderProduct> saveAll(List<OrderProduct> orderProducts);
+    void deleteAll();
 }
