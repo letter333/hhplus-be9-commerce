@@ -9,7 +9,10 @@ import java.util.Optional;
 
 public interface OrderRepository {
     Optional<Order> findById(Long id);
+    Optional<Order> findByIdWithLock(Long id);
     List<Order> findByStatusAndCreatedAtBefore(OrderStatus status, LocalDateTime dateTime);
     Order save(Order order);
     List<Order> saveAll(List<Order> orders);
+    void deleteAll();
+    List<Order> findAll();
 }

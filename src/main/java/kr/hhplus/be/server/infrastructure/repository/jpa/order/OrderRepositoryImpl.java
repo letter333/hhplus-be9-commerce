@@ -26,6 +26,11 @@ public class OrderRepositoryImpl implements OrderRepository {
     }
 
     @Override
+    public Optional<Order> findByIdWithLock(Long id) {
+        return orderJpaRepository.findByIdWithLock(id).map(OrderMapper::toOrder);
+    }
+
+    @Override
     public List<Order> findByStatusAndCreatedAtBefore(OrderStatus status, LocalDateTime dateTime) {
         return orderJpaRepository.findByStatusAndCreatedAtBefore(status, dateTime)
                 .stream()
@@ -51,6 +56,18 @@ public class OrderRepositoryImpl implements OrderRepository {
 
         return savedEntities.stream()
                 .map(OrderMapper::toOrder)
+                .toList();
+    }
+
+    @Override
+    public void deleteAll() {
+        orderJpaRepository.deleteAll();
+    }
+
+    @Override
+    public List<Order> findAll() {
+        return orderJpaRepository.findAll()
+                .stream().map(OrderMapper::toOrder)
                 .toList();
     }
 }
