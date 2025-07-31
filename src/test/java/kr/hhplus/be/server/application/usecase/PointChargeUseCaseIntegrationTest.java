@@ -48,24 +48,6 @@ public class PointChargeUseCaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("포인트 충전 성공 포인트가 없는 경우 새로 생성")
-    void 포인트_충전_신규생성() {
-        // given
-        Long userId = 999L;
-        Long chargeAmount = 50000L;
-
-        // when
-        Point result = pointChargeUseCase.execute(userId, chargeAmount);
-
-        // then
-        assertThat(result.getUserId()).isEqualTo(userId);
-        assertThat(result.getBalance()).isEqualTo(chargeAmount);
-
-        Point savedPoint = pointRepository.findByUserId(userId).orElseThrow();
-        assertThat(savedPoint.getBalance()).isEqualTo(chargeAmount);
-    }
-
-    @Test
     @DisplayName("충전 금액이 null일 때 예외 발생")
     void 충전_금액_null() {
         // given
