@@ -11,6 +11,7 @@ import kr.hhplus.be.server.common.response.CommonResponse;
 import kr.hhplus.be.server.domain.model.Product;
 import kr.hhplus.be.server.interfaces.dto.response.ProductListResponse;
 import kr.hhplus.be.server.interfaces.dto.response.ProductResponse;
+import kr.hhplus.be.server.interfaces.mapper.ProductResponseMapper;
 import kr.hhplus.be.server.mock.common.Response;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -54,7 +55,7 @@ public class ProductController {
             @PathVariable Long id
     ) {
         Product product = productGetUseCase.execute(id);
-        ProductResponse productResponse = toProductResponse(product);
+        ProductResponse productResponse = ProductResponseMapper.toProductResponse(product);
         return CommonResponse.ok(productResponse);
     }
 
@@ -63,9 +64,5 @@ public class ProductController {
         List<Product> products = productGetListUseCase.execute();
 
         return CommonResponse.ok(new ProductListResponse(products));
-    }
-
-    public ProductResponse toProductResponse(Product product) {
-        return new ProductResponse(product.getId(), product.getName(), product.getDescription(), product.getPrice(), product.getStock());
     }
 }

@@ -13,6 +13,7 @@ import kr.hhplus.be.server.common.response.CommonResponse;
 import kr.hhplus.be.server.domain.model.Point;
 import kr.hhplus.be.server.interfaces.dto.request.PointChargeRequest;
 import kr.hhplus.be.server.interfaces.dto.response.PointResponse;
+import kr.hhplus.be.server.interfaces.mapper.PointResponseMapper;
 import kr.hhplus.be.server.mock.common.Response;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -47,7 +48,7 @@ public class PointController {
     @GetMapping(value = "/api/v1/users/{id}/points")
     public CommonResponse<PointResponse> getPoint(@Parameter(description = "사용자 ID", example = "1") @PathVariable Long id) {
         Point point = pointGetUseCase.execute(id);
-        PointResponse pointResponse = new PointResponse(point.getId(), point.getAmount());
+        PointResponse pointResponse = PointResponseMapper.toPointResponse(point);
 
         return CommonResponse.ok("포인트 조회 성공", pointResponse);
     }
@@ -76,7 +77,7 @@ public class PointController {
     @PostMapping("/api/v1/users/{id}/points")
     public CommonResponse<PointResponse> chargePoint(@PathVariable Long id, @RequestBody @Valid PointChargeRequest pointChargeRequest) {
         Point chargedPoint = pointChargeUseCase.execute(id, pointChargeRequest.amount());
-        PointResponse pointResponse = new PointResponse(chargedPoint.getId(), chargedPoint.getAmount());
+        PointResponse pointResponse = PointResponseMapper.toPointResponse(chargedPoint);
 
         return CommonResponse.ok("포인트 충전 완료", pointResponse);
     }
