@@ -4,7 +4,9 @@ import kr.hhplus.be.server.application.usecase.dto.command.PaymentProcessCommand
 import kr.hhplus.be.server.domain.model.*;
 import kr.hhplus.be.server.domain.repository.OrderRepository;
 import kr.hhplus.be.server.domain.repository.PaymentRepository;
+import kr.hhplus.be.server.domain.repository.PointHistoryRepository;
 import kr.hhplus.be.server.domain.repository.PointRepository;
+import kr.hhplus.be.server.domain.service.ExternalPaymentDataPlatformService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,6 +29,12 @@ class PaymentProcessUseCaseTest {
 
     @Mock
     private PointRepository pointRepository;
+
+    @Mock
+    private PointHistoryRepository pointHistoryRepository;
+
+    @Mock
+    private ExternalPaymentDataPlatformService externalPaymentDataPlatformService;
 
     @InjectMocks
     private PaymentProcessUseCase paymentProcessUseCase;
