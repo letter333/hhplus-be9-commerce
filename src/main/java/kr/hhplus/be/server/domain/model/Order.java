@@ -10,6 +10,7 @@ import java.util.List;
 public class Order {
     private Long id;
     private Long userId;
+    private Long userCouponId;
     private OrderStatus status;
     private List<OrderProduct> orderProducts;
     private Long totalPrice;
@@ -20,9 +21,10 @@ public class Order {
     private LocalDateTime createdAt;
 
     @Builder
-    public Order(Long id, Long userId, OrderStatus status, List<OrderProduct> orderProducts, Long totalPrice, Long discountAmount, Long finalPrice, Address shippingAddress, String recipientNumber, LocalDateTime createdAt) {
+    public Order(Long id, Long userId, Long userCouponId, OrderStatus status, List<OrderProduct> orderProducts, Long totalPrice, Long discountAmount, Long finalPrice, Address shippingAddress, String recipientNumber, LocalDateTime createdAt) {
         this.id = id;
         this.userId = userId;
+        this.userCouponId = userCouponId;
         this.status = status;
         this.orderProducts = orderProducts;
         this.totalPrice = totalPrice;
