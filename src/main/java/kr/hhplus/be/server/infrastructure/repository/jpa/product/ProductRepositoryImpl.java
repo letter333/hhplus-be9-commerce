@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Repository
 @Primary
@@ -23,6 +24,22 @@ public class ProductRepositoryImpl implements ProductRepository {
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 상품 ID 입니다."));
         return Optional.ofNullable(ProductMapper.toProduct(productEntity));
     }
+
+    @Override
+    public Optional<Product> findByIdWithLock(Long id) {
+        return productJpaRepository.findByIdWithPessimisticLock(id)
+                .map(ProductMapper::toProduct);
+    }
+
+    @Override
+    public List<Product> findByIdsWithLock(List<Long> ids) {
+        return productJpaRepository.findByIdsWithPessimisticLock(ids)
+                .stream()
+                .map(ProductMapper::toProduct)
+                .collect(Collectors.toList());
+    }
+
+
 
     @Override
     public List<Product> findAll() {
@@ -59,5 +76,10 @@ public class ProductRepositoryImpl implements ProductRepository {
                 .stream()
                 .map(ProductMapper::toProduct)
                 .toList();
+    }
+
+    @Override
+    public void deleteAll() {
+        productJpaRepository.deleteAll();
     }
 }
