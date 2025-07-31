@@ -31,7 +31,7 @@ public class CouponInMemoryRepositoryImpl implements CouponRepository {
                 .id(1L)
                 .name("쿠폰1")
                 .type(CouponType.PERCENTAGE)
-                .discountPercentage(10L)
+                .discountAmount(10L)
                 .quantity(1000)
                 .expiredAt(LocalDateTime.of(2025, 8, 31, 23, 59, 59, 0))
                 .build();
@@ -47,6 +47,11 @@ public class CouponInMemoryRepositoryImpl implements CouponRepository {
     }
 
     @Override
+    public Optional<Coupon> findByIdWithLock(Long id) {
+        return Optional.empty();
+    }
+
+    @Override
     public Coupon save(Coupon coupon) {
         CouponEntity couponEntity = CouponMapper.toCouponEntity(coupon);
         CouponEntity savedEntity;
@@ -58,7 +63,6 @@ public class CouponInMemoryRepositoryImpl implements CouponRepository {
                     .name(couponEntity.getName())
                     .type(couponEntity.getType())
                     .discountAmount(couponEntity.getDiscountAmount())
-                    .discountPercentage(couponEntity.getDiscountPercentage())
                     .quantity(couponEntity.getQuantity())
                     .issuedQuantity(couponEntity.getIssuedQuantity())
                     .expiredAt(couponEntity.getExpiredAt())
@@ -88,5 +92,10 @@ public class CouponInMemoryRepositoryImpl implements CouponRepository {
         }
 
         return CouponMapper.toCoupon(savedEntity);
+    }
+
+    @Override
+    public void deleteAll() {
+
     }
 }

@@ -11,7 +11,6 @@ public record CouponIssueResponse(
         String couponCode,
         CouponType couponType,
         Long discountAmount,
-        Long discountPercentage,
         UserCouponStatus status,
         LocalDateTime expiredAt,
         LocalDateTime createdAt

@@ -11,21 +11,21 @@ public class Coupon {
     String name;
     CouponType type;
     Long discountAmount;
-    Long discountPercentage;
     int quantity;
     int issuedQuantity;
     LocalDateTime expiredAt;
+    LocalDateTime createdAt;
 
     @Builder
-    public Coupon(Long id, String name, CouponType type, Long discountAmount, Long discountPercentage, int quantity, int issuedQuantity, LocalDateTime expiredAt) {
+    public Coupon(Long id, String name, CouponType type, Long discountAmount, int quantity, int issuedQuantity, LocalDateTime expiredAt, LocalDateTime createdAt) {
         this.id = id;
         this.name = name;
         this.type = type;
         this.discountAmount = discountAmount;
-        this.discountPercentage = discountPercentage;
         this.quantity = quantity;
         this.issuedQuantity = issuedQuantity;
         this.expiredAt = expiredAt;
+        this.createdAt = createdAt;
     }
 
     public void issue() {

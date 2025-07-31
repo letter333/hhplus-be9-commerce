@@ -10,10 +10,10 @@ public class CouponMapper {
                 .name(couponEntity.getName())
                 .type(couponEntity.getType())
                 .discountAmount(couponEntity.getDiscountAmount())
-                .discountPercentage(couponEntity.getDiscountPercentage())
                 .quantity(couponEntity.getQuantity())
                 .issuedQuantity(couponEntity.getIssuedQuantity())
                 .expiredAt(couponEntity.getExpiredAt())
+                .createdAt(couponEntity.getCreatedAt())
                 .build();
     }
 
@@ -23,7 +23,6 @@ public class CouponMapper {
                 .name(coupon.getName())
                 .type(coupon.getType())
                 .discountAmount(coupon.getDiscountAmount())
-                .discountPercentage(coupon.getDiscountPercentage())
                 .quantity(coupon.getQuantity())
                 .issuedQuantity(coupon.getIssuedQuantity())
                 .expiredAt(coupon.getExpiredAt())
