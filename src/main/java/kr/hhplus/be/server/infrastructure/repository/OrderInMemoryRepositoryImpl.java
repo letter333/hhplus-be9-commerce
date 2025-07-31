@@ -26,6 +26,11 @@ public class OrderInMemoryRepositoryImpl implements OrderRepository {
     }
 
     @Override
+    public Optional<Order> findByIdWithLock(Long id) {
+        return Optional.empty();
+    }
+
+    @Override
     public List<Order> findByStatusAndCreatedAtBefore(OrderStatus status, LocalDateTime dateTime) {
         return List.of();
     }
@@ -61,6 +66,16 @@ public class OrderInMemoryRepositoryImpl implements OrderRepository {
 
     @Override
     public List<Order> saveAll(List<Order> orders) {
+        return List.of();
+    }
+
+    @Override
+    public void deleteAll() {
+
+    }
+
+    @Override
+    public List<Order> findAll() {
         return List.of();
     }
 }
