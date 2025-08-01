@@ -8,7 +8,7 @@ public class PointMapper {
         return Point.builder()
                 .id(pointEntity.getId())
                 .userId(pointEntity.getUserId())
-                .amount(pointEntity.getBalance())
+                .balance(pointEntity.getBalance())
                 .build();
     }
 
@@ -16,7 +16,7 @@ public class PointMapper {
         return PointEntity.builder()
                 .id(point.getId())
                 .userId(point.getUserId())
-                .balance(point.getAmount())
+                .balance(point.getBalance())
                 .build();
     }
 }

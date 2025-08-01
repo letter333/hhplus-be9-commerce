@@ -1,21 +1,49 @@
 package kr.hhplus.be.server.infrastructure.entity;
 
+import jakarta.persistence.*;
 import kr.hhplus.be.server.domain.model.OrderStatus;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
+@Entity
+@Table(name = "orders")
 @Getter
+@NoArgsConstructor
 public class OrderEntity extends BaseEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false)
     private Long userId;
+
+    @Column
     private Long userCouponId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private OrderStatus status;
+
+    @Column(nullable = false)
     private Long totalPrice;
+
+    @Column
     private Long discountAmount;
+
+    @Column(nullable = false)
     private Long finalPrice;
+
+    @Column(nullable = false)
     private String shippingAddress1;
+
+    @Column(nullable = false)
     private String shippingAddress2;
+
+    @Column(nullable = false)
     private String shippingZipCode;
+
+    @Column(nullable = false)
     private String recipientNumber;
 
     @Builder

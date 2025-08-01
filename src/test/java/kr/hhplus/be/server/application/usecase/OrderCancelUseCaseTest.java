@@ -16,7 +16,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
@@ -46,7 +46,7 @@ class OrderCancelUseCaseTest {
         @DisplayName("취소할 주문이 있을 경우 재고를 복구하고 주문 상태를 변경")
         void 취소할_주문_존재() {
             // given
-            ZonedDateTime oldDate = ZonedDateTime.now().minusMinutes(40);
+            LocalDateTime oldDate = LocalDateTime.now().minusMinutes(40);
             Order order1 = Order.builder().id(1L).status(OrderStatus.PENDING).createdAt(oldDate).build();
             Order order2 = Order.builder().id(2L).status(OrderStatus.PENDING).createdAt(oldDate).build();
             List<Order> targetOrders = List.of(order1, order2);
@@ -60,7 +60,7 @@ class OrderCancelUseCaseTest {
             Product product102 = Product.builder().id(102L).stock(10).build();
             List<Product> productsToRestore = List.of(product101, product102);
 
-            when(orderRepository.findByStatusAndCreatedAtBefore(eq(OrderStatus.PENDING), any(ZonedDateTime.class)))
+            when(orderRepository.findByStatusAndCreatedAtBefore(eq(OrderStatus.PENDING), any(LocalDateTime.class)))
                     .thenReturn(targetOrders);
             when(orderProductRepository.findByOrderIdIn(List.of(1L, 2L))).thenReturn(orderProducts);
             when(productRepository.findAllByIdIn(anyList())).thenReturn(productsToRestore);
@@ -83,7 +83,7 @@ class OrderCancelUseCaseTest {
         @DisplayName("취소할 주문이 없을 경우 아무 작업도 수행하지 않음")
         void 취소할_주문_없음() {
             // given
-            when(orderRepository.findByStatusAndCreatedAtBefore(eq(OrderStatus.PENDING), any(ZonedDateTime.class)))
+            when(orderRepository.findByStatusAndCreatedAtBefore(eq(OrderStatus.PENDING), any(LocalDateTime.class)))
                     .thenReturn(Collections.emptyList());
 
             // when

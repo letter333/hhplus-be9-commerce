@@ -2,18 +2,14 @@ package kr.hhplus.be.server.application.usecase;
 
 import kr.hhplus.be.server.application.usecase.dto.command.OrderCreateCommand;
 import kr.hhplus.be.server.domain.model.*;
-import kr.hhplus.be.server.domain.repository.OrderRepository;
-import kr.hhplus.be.server.domain.repository.ProductRepository;
+import kr.hhplus.be.server.domain.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,8 +17,9 @@ import java.util.stream.Collectors;
 public class OrderCreateUseCase {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
-    private final Map<Long, ReentrantLock> lockMap = new ConcurrentHashMap<>();
-    private static final Long DEFAULT_TIMEOUT_SECONDS = 10L;
+    private final OrderProductRepository orderProductRepository;
+    private final CouponRepository couponRepository;
+    private final UserCouponRepository userCouponRepository;
 
     @Transactional
     public Order execute(OrderCreateCommand command) {
@@ -30,33 +27,46 @@ public class OrderCreateUseCase {
                 .map(OrderProduct::getProductId)
                 .distinct()
                 .sorted()
-                .toList();
+                .collect(Collectors.toList());
 
-        List<ReentrantLock> acquiredLocks = new ArrayList<>();
+        List<Product> products = productRepository.findByIdsWithLock(sortedProductIds);
+
+        if (products.size() != sortedProductIds.size()) {
+            throw new IllegalArgumentException("존재하지 않는 상품이 포함되어 있습니다.");
+        }
+
+        UserCoupon userCoupon = null;
+        Long totalPrice = 0L;
+        Long finalPrice;
+
         try {
-            for (Long productId : sortedProductIds) {
-                ReentrantLock lock = lockMap.computeIfAbsent(productId, k -> new ReentrantLock(true));
-                if (!lock.tryLock(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-                    throw new IllegalStateException("주문 처리량이 많아 요청에 실패했습니다. 잠시 후 다시 시도해주세요.");
-                }
-                acquiredLocks.add(lock);
-            }
-
-            List<Product> toUpdateProducts = new ArrayList<>();
-            Long totalPrice = 0L;
+            Map<Long, Product> productMap = products.stream()
+                    .collect(Collectors.toMap(Product::getId, Function.identity()));
 
             for (OrderProduct orderProduct : command.orderProductList()) {
-                Product product = productRepository.findById(orderProduct.getProductId())
+                Product product = products.stream()
+                        .filter(p -> p.getId().equals(orderProduct.getProductId()))
+                        .findFirst()
                         .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 상품입니다."));
 
                 product.decreaseStock(orderProduct.getQuantity());
-                toUpdateProducts.add(product);
                 totalPrice += product.getPrice() * orderProduct.getQuantity();
             }
-            productRepository.saveAll(toUpdateProducts);
 
-            Long discountAmount = 0L;
-            Long finalPrice = totalPrice - discountAmount;
+            productRepository.saveAll(products);
+
+            if (command.userCouponId() != null && command.userCouponId() > 0) {
+                userCoupon = userCouponRepository.findById(command.userCouponId())
+                        .orElseThrow(() -> new IllegalArgumentException("잘못된 쿠폰입니다."));
+                Coupon coupon = couponRepository.findById(userCoupon.getCouponId())
+                        .orElseThrow(() -> new IllegalArgumentException("잘못된 쿠폰입니다."));
+
+                finalPrice = userCoupon.calculateDiscount(coupon.getType(), coupon.getDiscountAmount(), totalPrice);
+                userCoupon.use();
+                userCouponRepository.save(userCoupon);
+            } else {
+                finalPrice = totalPrice;
+            }
 
             Order order = Order.builder()
                     .userId(command.userId())
@@ -68,15 +78,29 @@ public class OrderCreateUseCase {
                     .recipientNumber(command.recipientNumber())
                     .build();
 
-            return orderRepository.save(order);
+            Order savedOrder = orderRepository.save(order);
 
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("주문 처리 중 문제가 발생했습니다.", e);
-        } finally {
-            for (int i = acquiredLocks.size() - 1; i >= 0; i--) {
-                acquiredLocks.get(i).unlock();
+            List<OrderProduct> orderProducts = command.orderProductList().stream()
+                    .map(orderProduct -> {
+                        Product product = productMap.get(orderProduct.getProductId());
+                        return OrderProduct.builder()
+                                .orderId(savedOrder.getId())
+                                .productId(orderProduct.getProductId())
+                                .quantity(orderProduct.getQuantity())
+                                .price(product.getPrice())
+                                .build();
+                    })
+                    .toList();
+
+            List<OrderProduct> savedOrderProducts = orderProductRepository.saveAll(orderProducts);
+
+            return savedOrder;
+
+        } catch (Exception e) {
+            if (userCoupon != null) {
+                userCoupon.restore();
             }
+            throw new IllegalStateException("주문 처리 중 문제가 발생했습니다.", e);
         }
     }
 }

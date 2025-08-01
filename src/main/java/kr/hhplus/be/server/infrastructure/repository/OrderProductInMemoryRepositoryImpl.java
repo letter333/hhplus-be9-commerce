@@ -17,4 +17,14 @@ public class OrderProductInMemoryRepositoryImpl implements OrderProductRepositor
     public List<OrderProduct> findByOrderIdIn(List<Long> orderIds) {
         return List.of();
     }
+
+    @Override
+    public List<OrderProduct> saveAll(List<OrderProduct> orderProducts) {
+        return List.of();
+    }
+
+    @Override
+    public void deleteAll() {
+
+    }
 }

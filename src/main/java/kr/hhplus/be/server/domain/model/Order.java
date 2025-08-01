@@ -3,13 +3,14 @@ package kr.hhplus.be.server.domain.model;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
 public class Order {
     private Long id;
     private Long userId;
+    private Long userCouponId;
     private OrderStatus status;
     private List<OrderProduct> orderProducts;
     private Long totalPrice;
@@ -17,12 +18,13 @@ public class Order {
     private Long finalPrice;
     private Address shippingAddress;
     private String recipientNumber;
-    private ZonedDateTime createdAt;
+    private LocalDateTime createdAt;
 
     @Builder
-    public Order(Long id, Long userId, OrderStatus status, List<OrderProduct> orderProducts, Long totalPrice, Long discountAmount, Long finalPrice, Address shippingAddress, String recipientNumber, ZonedDateTime createdAt) {
+    public Order(Long id, Long userId, Long userCouponId, OrderStatus status, List<OrderProduct> orderProducts, Long totalPrice, Long discountAmount, Long finalPrice, Address shippingAddress, String recipientNumber, LocalDateTime createdAt) {
         this.id = id;
         this.userId = userId;
+        this.userCouponId = userCouponId;
         this.status = status;
         this.orderProducts = orderProducts;
         this.totalPrice = totalPrice;

@@ -57,6 +57,16 @@ public class ProductInMemoryRepositoryImpl implements ProductRepository {
     }
 
     @Override
+    public Optional<Product> findByIdWithLock(Long id) {
+        return Optional.empty();
+    }
+
+    @Override
+    public List<Product> findByIdsWithLock(List<Long> ids) {
+        return List.of();
+    }
+
+    @Override
     public List<Product> findAll() {
         return table.values().stream()
                 .map(ProductMapper::toProduct)
@@ -109,5 +119,10 @@ public class ProductInMemoryRepositoryImpl implements ProductRepository {
                 .filter(productEntity -> productEntity != null)
                 .map(ProductMapper::toProduct)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public void deleteAll() {
+
     }
 }

@@ -1,6 +1,6 @@
 package kr.hhplus.be.server.mock.order.dto;
 
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 
 public record CreateOrderResponse(
         Long id,
@@ -13,7 +13,7 @@ public record CreateOrderResponse(
         String shippingAddress2,
         String shippingZipCode,
         String recipientNumber,
-        ZonedDateTime createdAt
+        LocalDateTime createdAt
 
 ) {
     public enum status {

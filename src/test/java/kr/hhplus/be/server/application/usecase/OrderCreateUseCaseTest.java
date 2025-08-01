@@ -1,12 +1,8 @@
 package kr.hhplus.be.server.application.usecase;
 
 import kr.hhplus.be.server.application.usecase.dto.command.OrderCreateCommand;
-import kr.hhplus.be.server.domain.model.Address;
-import kr.hhplus.be.server.domain.model.Order;
-import kr.hhplus.be.server.domain.model.OrderProduct;
-import kr.hhplus.be.server.domain.model.Product;
-import kr.hhplus.be.server.domain.repository.OrderRepository;
-import kr.hhplus.be.server.domain.repository.ProductRepository;
+import kr.hhplus.be.server.domain.model.*;
+import kr.hhplus.be.server.domain.repository.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -15,15 +11,15 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.mockito.BDDMockito.*;
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("주문 단위 테스트")
@@ -34,6 +30,15 @@ class OrderCreateUseCaseTest {
     @Mock
     private ProductRepository productRepository;
 
+    @Mock
+    private OrderProductRepository orderProductRepository;
+
+    @Mock
+    private CouponRepository couponRepository;
+
+    @Mock
+    private UserCouponRepository userCouponRepository;
+
     @InjectMocks
     private OrderCreateUseCase orderCreateUseCase;
 
@@ -43,21 +48,21 @@ class OrderCreateUseCaseTest {
         @Test
         @DisplayName("주문 생성 성공")
         void 주문_생성() {
-            //given
+            // given
             Long userId = 1L;
             List<OrderProduct> orderProductList = List.of(
-                    new OrderProduct(1L, 1L, 5, 1000L),
-                    new OrderProduct(2L, 2L, 1, 20_000L)
+                    new OrderProduct(1L, 1L, 1L, 5, 10000L),
+                    new OrderProduct(2L, 1L, 2L, 1, 20000L)
             );
-            Address shippingAddress = new Address("기본 주소", "상세 주소", "1234567890");
+            Address shippingAddress = new Address("기본 주소", "상세 주소", "12345");
             String recipientNumber = "010-1234-5678";
-            OrderCreateCommand command = new OrderCreateCommand(userId, orderProductList, shippingAddress, recipientNumber);
+            OrderCreateCommand command = new OrderCreateCommand(userId, null, orderProductList, shippingAddress, recipientNumber);
 
             Product product1 = Product.builder().id(1L).name("상품1").price(10000L).stock(10).build();
-            Product product2 = Product.builder().id(2L).name("상품2").price(5000L).stock(5).build();
+            Product product2 = Product.builder().id(2L).name("상품2").price(20000L).stock(5).build();
+            List<Product> products = List.of(product1, product2);
 
-            when(productRepository.findById(1L)).thenReturn(Optional.of(product1));
-            when(productRepository.findById(2L)).thenReturn(Optional.of(product2));
+            when(productRepository.findByIdsWithLock(List.of(1L, 2L))).thenReturn(products);
             when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
             // when
@@ -66,321 +71,123 @@ class OrderCreateUseCaseTest {
             // then
             assertThat(resultOrder).isNotNull();
             assertThat(resultOrder.getUserId()).isEqualTo(userId);
-            assertThat(resultOrder.getTotalPrice()).isEqualTo(55000L);
-            assertThat(resultOrder.getFinalPrice()).isEqualTo(55000L);
+            assertThat(resultOrder.getTotalPrice()).isEqualTo(70000L);
+            assertThat(resultOrder.getFinalPrice()).isEqualTo(70000L);
             assertThat(product1.getStock()).isEqualTo(5);
             assertThat(product2.getStock()).isEqualTo(4);
 
-            verify(productRepository, times(2)).findById(anyLong());
-            verify(productRepository, times(1)).saveAll(anyList());
+            verify(productRepository, times(1)).findByIdsWithLock(List.of(1L, 2L));
+            verify(productRepository, times(1)).saveAll(products);
             verify(orderRepository, times(1)).save(any(Order.class));
         }
 
         @Test
-        @DisplayName("존재하지 않는 상품이면 예외 처리")
+        @DisplayName("존재하지 않는 상품이 포함된 경우 예외 처리")
         void 존재하지_않는_상품_주문() {
             // given
             Long userId = 1L;
-            List<OrderProduct> orderProductList = List.of(new OrderProduct(1L, 1111L, 1, 1000L));
+            List<OrderProduct> orderProductList = List.of(new OrderProduct(1L, 1L, 1L, 1, 10000L));
             Address shippingAddress = new Address("기본 주소", "상세 주소", "12345");
             String recipientNumber = "010-1234-5678";
-            OrderCreateCommand command = new OrderCreateCommand(userId, orderProductList, shippingAddress, recipientNumber);
+            OrderCreateCommand command = new OrderCreateCommand(userId, null, orderProductList, shippingAddress, recipientNumber);
 
-            when(productRepository.findById(1111L)).thenReturn(Optional.empty());
+            when(productRepository.findByIdsWithLock(List.of(1L))).thenReturn(Collections.emptyList());
 
             // when & then
-            assertThatThrownBy(() -> orderCreateUseCase.execute(command)).isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> orderCreateUseCase.execute(command))
+                    .isInstanceOf(IllegalArgumentException.class);
 
+            verify(productRepository).findByIdsWithLock(List.of(1L));
             verify(orderRepository, never()).save(any(Order.class));
             verify(productRepository, never()).saveAll(anyList());
         }
-    }
-
-    @Nested
-    @DisplayName("동시성 제어 테스트")
-    class ConcurrencyControlTest {
-        @Test
-        @DisplayName("동일 상품에 대한 동시 주문 시 재고가 정확히 감소한다")
-        void 동일_상품_동시_주문() throws InterruptedException {
-            // given
-            int threadCount = 100;
-            int orderQuantityPerThread = 1;
-            Product testProduct = Product.builder()
-                    .id(1L)
-                    .name("테스트 상품")
-                    .price(10000L)
-                    .stock(100)
-                    .build();
-
-            Address testAddress = new Address("서울시 강남구", "테헤란로 123", "12345");
-
-            ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
-            CountDownLatch latch = new CountDownLatch(threadCount);
-            List<Order> successOrders = Collections.synchronizedList(new ArrayList<>());
-            AtomicInteger failureCount = new AtomicInteger(0);
-
-            when(productRepository.findById(1L)).thenReturn(Optional.of(testProduct));
-            when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
-                Order order = invocation.getArgument(0);
-                return Order.builder()
-                        .id(System.currentTimeMillis()) // 임시 ID 생성
-                        .userId(order.getUserId())
-                        .status(order.getStatus())
-                        .orderProducts(order.getOrderProducts())
-                        .totalPrice(order.getTotalPrice())
-                        .finalPrice(order.getFinalPrice())
-                        .shippingAddress(order.getShippingAddress())
-                        .recipientNumber(order.getRecipientNumber())
-                        .build();
-            });
-
-            // when
-            for (int i = 0; i < threadCount; i++) {
-                final long userId = i + 1L;
-                executorService.submit(() -> {
-                    try {
-                        OrderProduct orderProduct = new OrderProduct(1L, 1L, orderQuantityPerThread, 10000L);
-                        OrderCreateCommand command = new OrderCreateCommand(
-                                userId,
-                                List.of(orderProduct),
-                                testAddress,
-                                "010-1234-5678"
-                        );
-
-                        Order result = orderCreateUseCase.execute(command);
-                        successOrders.add(result);
-
-                    } catch (Exception e) {
-                        failureCount.incrementAndGet();
-                    } finally {
-                        latch.countDown();
-                    }
-                });
-            }
-
-            latch.await(10, TimeUnit.SECONDS);
-            executorService.shutdown();
-
-            // then
-            int expectedSuccessCount = 100;
-            int expectedFailureCount = threadCount - expectedSuccessCount;
-
-            assertThat(successOrders).hasSize(expectedSuccessCount);
-            assertThat(failureCount.get()).isEqualTo(expectedFailureCount);
-            assertThat(testProduct.getStock()).isEqualTo(0);
-
-            successOrders.forEach(order -> {
-                assertThat(order.getOrderProducts()).hasSize(1);
-                assertThat(order.getTotalPrice()).isEqualTo(10000L);
-                assertThat(order.getFinalPrice()).isEqualTo(10000L);
-            });
-        }
 
         @Test
-        @DisplayName("재고 부족 시 일부 주문만 성공하고 나머지는 실패한다")
-        void 재고_부족시_일부_주문만_성공() throws InterruptedException {
+        @DisplayName("재고 부족 시 예외 처리")
+        void 재고_부족_주문() {
             // given
-            Product testProduct = Product.builder()
-                    .id(1L)
-                    .name("테스트 상품")
-                    .price(10000L)
-                    .stock(10)
-                    .build();
+            Long userId = 1L;
+            List<OrderProduct> orderProductList = List.of(new OrderProduct(1L, 1L, 1L, 10, 10000L));
+            Address shippingAddress = new Address("기본 주소", "상세 주소", "12345");
+            String recipientNumber = "010-1234-5678";
+            OrderCreateCommand command = new OrderCreateCommand(userId, null, orderProductList, shippingAddress, recipientNumber);
 
-            Address testAddress = new Address("서울시 강남구", "테헤란로 123", "12345");
+            Product product = Product.builder().id(1L).name("상품1").price(10000L).stock(5).build();
+            when(productRepository.findByIdsWithLock(List.of(1L))).thenReturn(List.of(product));
 
-            when(productRepository.findById(1L)).thenReturn(Optional.of(testProduct));
+            // when & then
+            assertThatThrownBy(() -> orderCreateUseCase.execute(command))
+                    .isInstanceOf(IllegalStateException.class);
 
-            int threadCount = 20;
-            int orderQuantityPerThread = 2;
-
-            ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
-            CountDownLatch latch = new CountDownLatch(threadCount);
-            List<Order> successOrders = Collections.synchronizedList(new ArrayList<>());
-            List<Exception> failures = Collections.synchronizedList(new ArrayList<>());
-
-            // when
-            for (int i = 0; i < threadCount; i++) {
-                final long userId = i + 1L;
-                executorService.submit(() -> {
-                    try {
-                        OrderProduct orderProduct = new OrderProduct(1L, 1L, orderQuantityPerThread, 10000L);
-                        OrderCreateCommand command = new OrderCreateCommand(
-                                userId,
-                                List.of(orderProduct),
-                                testAddress,
-                                "010-1234-5678"
-                        );
-
-                        Order result = orderCreateUseCase.execute(command);
-                        successOrders.add(result);
-
-                    } catch (Exception e) {
-                        failures.add(e);
-                    } finally {
-                        latch.countDown();
-                    }
-                });
-            }
-
-            latch.await(10, TimeUnit.SECONDS);
-            executorService.shutdown();
-
-            // then
-            int maxPossibleOrders = 10 / orderQuantityPerThread;
-            assertThat(successOrders).hasSize(maxPossibleOrders);
-            assertThat(failures).hasSize(threadCount - maxPossibleOrders);
-            assertThat(testProduct.getStock()).isEqualTo(0);
-
-            failures.forEach(exception -> {
-                assertThat(exception).isInstanceOf(IllegalArgumentException.class);
-            });
+            verify(productRepository).findByIdsWithLock(List.of(1L));
+            verify(orderRepository, never()).save(any(Order.class));
         }
     }
 
     @Nested
-    @DisplayName("다중 상품 동시성 테스트")
-    class MultipleProductConcurrencyTest {
-
+    @DisplayName("쿠폰 적용 테스트")
+    class CouponApplicationTest {
         @Test
-        @DisplayName("서로 다른 상품에 대한 동시 주문은 서로 영향을 주지 않는다")
-        void 서로_다른_상품_동시_주문_독립적_처리() throws InterruptedException {
+        @DisplayName("쿠폰 적용 성공")
+        void 쿠폰_적용_성공() {
             // given
-            Product product1 = Product.builder().id(1L).name("상품1").price(10000L).stock(50).build();
-            Product product2 = Product.builder().id(2L).name("상품2").price(20000L).stock(50).build();
-            Address testAddress = new Address("서울시 강남구", "테헤란로 123", "12345");
+            Long userId = 1L;
+            Long userCouponId = 1L;
+            Long couponId = 1L;
+            List<OrderProduct> orderProductList = List.of(new OrderProduct(1L, 1L, 1L, 2, 10000L));
+            Address shippingAddress = new Address("기본 주소", "상세 주소", "12345");
+            String recipientNumber = "010-1111-2222";
+            OrderCreateCommand command = new OrderCreateCommand(userId, userCouponId, orderProductList, shippingAddress, recipientNumber);
 
-            when(productRepository.findById(1L)).thenReturn(Optional.of(product1));
-            when(productRepository.findById(2L)).thenReturn(Optional.of(product2));
-            when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
-                Order order = invocation.getArgument(0);
-                return Order.builder()
-                        .id(System.currentTimeMillis())
-                        .userId(order.getUserId())
-                        .status(order.getStatus())
-                        .orderProducts(order.getOrderProducts())
-                        .totalPrice(order.getTotalPrice())
-                        .discountAmount(order.getDiscountAmount())
-                        .finalPrice(order.getFinalPrice())
-                        .shippingAddress(order.getShippingAddress())
-                        .recipientNumber(order.getRecipientNumber())
-                        .createdAt(order.getCreatedAt())
-                        .build();
-            });
+            Product product = Product.builder().id(1L).name("상품").price(10000L).stock(10).build();
+            Coupon coupon = new Coupon(couponId, "3000원 할인 쿠폰", CouponType.FIXED, 3000L, 100, 10, LocalDateTime.now().plusDays(10), LocalDateTime.now());
+            UserCoupon userCoupon = new UserCoupon(userCouponId, userId, couponId, "coupon-code", UserCouponStatus.ISSUED, null, null, null);
 
-            int threadCount = 100;
-            ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
-            CountDownLatch latch = new CountDownLatch(threadCount);
-            List<Order> successOrders = Collections.synchronizedList(new ArrayList<>());
+            given(productRepository.findByIdsWithLock(List.of(1L))).willReturn(List.of(product));
+            given(userCouponRepository.findById(userCouponId)).willReturn(Optional.of(userCoupon));
+            given(couponRepository.findById(couponId)).willReturn(Optional.of(coupon));
+            given(orderRepository.save(any(Order.class))).willAnswer(invocation -> invocation.getArgument(0));
 
             // when
-            for (int i = 0; i < threadCount; i++) {
-                final long userId = i + 1L;
-                final long productId = (i % 2) + 1L;
-
-                executorService.submit(() -> {
-                    try {
-                        OrderProduct orderProduct = new OrderProduct(1L, productId, 1, productId * 10000L);
-                        OrderCreateCommand command = new OrderCreateCommand(
-                                userId,
-                                List.of(orderProduct),
-                                testAddress,
-                                "010-1234-5678"
-                        );
-
-                        Order result = orderCreateUseCase.execute(command);
-                        successOrders.add(result);
-
-                    } catch (Exception e) {
-
-                    } finally {
-                        latch.countDown();
-                    }
-                });
-            }
-
-            latch.await(10, TimeUnit.SECONDS);
-            executorService.shutdown();
+            Order order = orderCreateUseCase.execute(command);
 
             // then
-            assertThat(successOrders).hasSize(100);
-            assertThat(product1.getStock()).isEqualTo(0);
-            assertThat(product2.getStock()).isEqualTo(0);
-
-            long product1Orders = successOrders.stream()
-                    .mapToLong(order -> order.getOrderProducts().stream()
-                            .filter(op -> op.getProductId().equals(1L))
-                            .count())
-                    .sum();
-            long product2Orders = successOrders.stream()
-                    .mapToLong(order -> order.getOrderProducts().stream()
-                            .filter(op -> op.getProductId().equals(2L))
-                            .count())
-                    .sum();
-
-            assertThat(product1Orders).isEqualTo(50);
-            assertThat(product2Orders).isEqualTo(50);
+            assertThat(order.getTotalPrice()).isEqualTo(20000L);
+            assertThat(order.getFinalPrice()).isEqualTo(17000L);
+            assertThat(userCoupon.getStatus()).isEqualTo(UserCouponStatus.USED);
+            verify(userCouponRepository, times(1)).save(userCoupon);
+            verify(orderRepository, times(1)).save(any(Order.class));
         }
 
-        @Nested
-        @DisplayName("락 타임아웃 테스트")
-        class LockTimeoutTest {
+        @Test
+        @DisplayName("주문 실패 시 쿠폰 상태가 복구된다")
+        void 주문_실패_시_쿠폰_복구() {
+            // given
+            Long userId = 1L;
+            Long userCouponId = 1L;
+            Long couponId = 1L;
+            List<OrderProduct> orderProductList = List.of(new OrderProduct(1L, 1L, 1L, 1, 10000L));
+            Address shippingAddress = new Address("기본 주소", "상세 주소", "12345");
+            String recipientNumber = "010-1111-2222";
+            OrderCreateCommand command = new OrderCreateCommand(userId, userCouponId, orderProductList, shippingAddress, recipientNumber);
 
-            @Test
-            @DisplayName("락 획득 타임아웃 시 예외 발생")
-            void 락_획득_타임아웃() throws InterruptedException {
-                // given
-                Product testProduct = Product.builder()
-                        .id(1L)
-                        .name("테스트 상품")
-                        .price(10000L)
-                        .stock(10)
-                        .build();
-                Address testAddress = new Address("서울시 강남구", "테헤란로 123", "12345");
+            Product product = Product.builder().id(1L).name("상품").price(10000L).stock(10).build();
+            Coupon coupon = new Coupon(couponId, "10% 할인 쿠폰", CouponType.PERCENTAGE, 10L, 100, 10, LocalDateTime.now().plusDays(10), LocalDateTime.now());
+            UserCoupon userCoupon = new UserCoupon(userCouponId, userId, couponId, "coupon-code", UserCouponStatus.ISSUED, null, null, null);
 
-                when(productRepository.findById(1L)).thenAnswer(invocation -> {
-                    Thread.sleep(6000);
-                    return Optional.of(testProduct);
-                });
+            given(productRepository.findByIdsWithLock(List.of(1L))).willReturn(List.of(product));
+            given(userCouponRepository.findById(userCouponId)).willReturn(Optional.of(userCoupon));
+            given(couponRepository.findById(couponId)).willReturn(Optional.of(coupon));
+            given(orderRepository.save(any(Order.class))).willThrow(new RuntimeException("DB 저장 실패"));
 
-                int threadCount = 3;
-                ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
-                CountDownLatch latch = new CountDownLatch(threadCount);
-                List<Exception> timeoutExceptions = Collections.synchronizedList(new ArrayList<>());
+            // when & then
+            assertThatThrownBy(() -> orderCreateUseCase.execute(command))
+                    .isInstanceOf(IllegalStateException.class);
 
-                // when
-                for (int i = 0; i < threadCount; i++) {
-                    final long userId = i + 1L;
-                    executorService.submit(() -> {
-                        try {
-                            OrderProduct orderProduct = new OrderProduct(1L, 1L, 1, 10000L);
-                            OrderCreateCommand command = new OrderCreateCommand(
-                                    userId,
-                                    List.of(orderProduct),
-                                    testAddress,
-                                    "010-1234-5678"
-                            );
-
-                            orderCreateUseCase.execute(command);
-
-                        } catch (IllegalStateException e) {
-                            if (e.getMessage().contains("요청에 실패했습니다")) {
-                                timeoutExceptions.add(e);
-                            }
-                        } catch (Exception e) {
-
-                        } finally {
-                            latch.countDown();
-                        }
-                    });
-                }
-
-                latch.await(20, TimeUnit.SECONDS);
-                executorService.shutdown();
-
-                // then
-                assertThat(timeoutExceptions.size()).isGreaterThan(0);
-            }
+            // then
+            assertThat(userCoupon.getStatus()).isEqualTo(UserCouponStatus.ISSUED);
+            verify(userCouponRepository, times(1)).save(userCoupon);
+            verify(orderRepository, times(1)).save(any(Order.class));
         }
     }
 }

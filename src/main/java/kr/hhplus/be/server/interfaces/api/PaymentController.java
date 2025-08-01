@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import jakarta.validation.Valid;
 import kr.hhplus.be.server.application.usecase.PaymentFailureRecordUseCase;
 import kr.hhplus.be.server.application.usecase.PaymentProcessUseCase;
 import kr.hhplus.be.server.application.usecase.dto.command.PaymentFailureCommand;
@@ -53,7 +54,7 @@ public class PaymentController {
     @PostMapping("/api/v1/orders/{id}/payments")
     public CommonResponse<PaymentResponse> payment(
             @PathVariable Long id,
-            @RequestBody PaymentProcessRequest request
+            @RequestBody @Valid PaymentProcessRequest request
     ) {
         try {
             PaymentProcessCommand command = new PaymentProcessCommand(

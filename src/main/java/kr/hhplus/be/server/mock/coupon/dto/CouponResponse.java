@@ -1,6 +1,6 @@
 package kr.hhplus.be.server.mock.coupon.dto;
 
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 
 public record CouponResponse(
         Long id,
@@ -10,9 +10,9 @@ public record CouponResponse(
         Long amount,
         Long percentage,
         status status,
-        ZonedDateTime usedAt,
-        ZonedDateTime expiredAt,
-        ZonedDateTime createdAt
+        LocalDateTime usedAt,
+        LocalDateTime expiredAt,
+        LocalDateTime createdAt
 ) {
     public enum type {
         AMOUNT, PERCENTAGE

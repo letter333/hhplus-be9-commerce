@@ -7,6 +7,7 @@ import kr.hhplus.be.server.infrastructure.mapper.UserCouponMapper;
 import org.springframework.stereotype.Repository;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
@@ -23,11 +24,12 @@ public class UserCouponInMemoryRepositoryImpl implements UserCouponRepository {
     }
 
     @Override
-    public Optional<UserCoupon> findByUserId(Long userId) {
+    public List<UserCoupon> findByUserId(Long userId) {
         return table.values().stream()
                 .filter(userCouponEntity -> userCouponEntity.getUserId().equals(userId))
                 .findFirst()
-                .map(UserCouponMapper::toUserCoupon );
+                .map(UserCouponMapper::toUserCoupon)
+                .stream().toList();
     }
 
     @Override
@@ -63,5 +65,15 @@ public class UserCouponInMemoryRepositoryImpl implements UserCouponRepository {
         }
 
         return UserCouponMapper.toUserCoupon(savedEntity);
+    }
+
+    @Override
+    public void deleteAll() {
+
+    }
+
+    @Override
+    public Optional<UserCoupon> findByCouponIdAndUserId(Long couponId, Long userId) {
+        return Optional.empty();
     }
 }

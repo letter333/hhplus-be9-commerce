@@ -11,7 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -26,7 +26,7 @@ public class OrderCancelUseCase {
 
     @Transactional
     public void execute() {
-        ZonedDateTime threshold = ZonedDateTime.now().minusMinutes(CANCEL_MINUTE);
+        LocalDateTime threshold = LocalDateTime.now().minusMinutes(CANCEL_MINUTE);
         List<Order> targetOrders = orderRepository.findByStatusAndCreatedAtBefore(OrderStatus.PENDING, threshold);
 
         if(targetOrders.isEmpty()) {

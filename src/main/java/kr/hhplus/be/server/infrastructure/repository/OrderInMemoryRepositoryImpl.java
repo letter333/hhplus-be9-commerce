@@ -7,7 +7,7 @@ import kr.hhplus.be.server.infrastructure.entity.OrderEntity;
 import kr.hhplus.be.server.infrastructure.mapper.OrderMapper;
 import org.springframework.stereotype.Repository;
 
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,7 +26,12 @@ public class OrderInMemoryRepositoryImpl implements OrderRepository {
     }
 
     @Override
-    public List<Order> findByStatusAndCreatedAtBefore(OrderStatus status, ZonedDateTime dateTime) {
+    public Optional<Order> findByIdWithLock(Long id) {
+        return Optional.empty();
+    }
+
+    @Override
+    public List<Order> findByStatusAndCreatedAtBefore(OrderStatus status, LocalDateTime dateTime) {
         return List.of();
     }
 
@@ -61,6 +66,16 @@ public class OrderInMemoryRepositoryImpl implements OrderRepository {
 
     @Override
     public List<Order> saveAll(List<Order> orders) {
+        return List.of();
+    }
+
+    @Override
+    public void deleteAll() {
+
+    }
+
+    @Override
+    public List<Order> findAll() {
         return List.of();
     }
 }

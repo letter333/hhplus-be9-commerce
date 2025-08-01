@@ -4,11 +4,14 @@ import kr.hhplus.be.server.application.usecase.dto.command.PaymentProcessCommand
 import kr.hhplus.be.server.domain.model.*;
 import kr.hhplus.be.server.domain.repository.OrderRepository;
 import kr.hhplus.be.server.domain.repository.PaymentRepository;
+import kr.hhplus.be.server.domain.repository.PointHistoryRepository;
 import kr.hhplus.be.server.domain.repository.PointRepository;
 import kr.hhplus.be.server.domain.service.ExternalPaymentDataPlatformService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -16,11 +19,12 @@ public class PaymentProcessUseCase {
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
     private final PointRepository pointRepository;
+    private final PointHistoryRepository pointHistoryRepository;
     private final ExternalPaymentDataPlatformService externalPaymentDataPlatformService;
 
     @Transactional
     public Payment execute(PaymentProcessCommand command) {
-        Order order = orderRepository.findById(command.orderId())
+        Order order = orderRepository.findByIdWithLock(command.orderId())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 주문 정보입니다."));
 
         if (order.getStatus() == OrderStatus.PAID) {
@@ -36,6 +40,16 @@ public class PaymentProcessUseCase {
 
             point.use(order.getFinalPrice());
             pointRepository.save(point);
+
+            PointHistory pointHistory = PointHistory.builder()
+                    .userId(command.userId())
+                    .orderId(order.getId())
+                    .type(PointHistoryType.USE)
+                    .amount(order.getFinalPrice())
+                    .balanceAfter(point.getBalance())
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            pointHistoryRepository.save(pointHistory);
 
         } else if (command.paymentMethod() == PaymentMethod.CARD) {
             //카드 결제 (외부 PG연동)

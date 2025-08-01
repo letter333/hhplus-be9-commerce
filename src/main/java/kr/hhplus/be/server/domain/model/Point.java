@@ -7,7 +7,7 @@ import lombok.Getter;
 public class Point {
     private Long id;
     private Long userId;
-    private Long amount;
+    private Long balance;
 
     private static final Long MAX_AMOUNT_PER_CHARGE = 1_000_000L;
     private static final Long MAX_TOTAL_AMOUNT = 10_000_000L;
@@ -16,20 +16,20 @@ public class Point {
 
 
     @Builder
-    public Point(Long id, Long userId, Long amount) {
+    public Point(Long id, Long userId, Long balance) {
         this.id = id;
         this.userId = userId;
-        this.amount = amount;
+        this.balance = balance;
     }
 
     public void charge(Long chargeAmount) {
         validateCharge(chargeAmount);
-        this.amount = this.amount + chargeAmount;
+        this.balance = this.balance + chargeAmount;
     }
 
     public void use(Long useAmount) {
         validateUse(useAmount);
-        this.amount = this.amount - useAmount;
+        this.balance = this.balance - useAmount;
     }
 
     private void validateCharge(Long chargeAmount) {
@@ -45,7 +45,7 @@ public class Point {
             throw new IllegalArgumentException(String.format("충전 금액은 %d원 이상이어야 합니다.", MIN_AMOUNT_PER_CHARGE));
         }
 
-        if(this.amount + chargeAmount > MAX_TOTAL_AMOUNT) {
+        if(this.balance + chargeAmount > MAX_TOTAL_AMOUNT) {
             throw new IllegalArgumentException(String.format("보유 가능한 최대 포인트는 %,d원입니다.", MAX_TOTAL_AMOUNT));
         }
     }
@@ -54,7 +54,7 @@ public class Point {
         if(useAmount < MIN_AMOUNT_PER_USE) {
             throw new IllegalArgumentException(String.format("최소 사용 금액은 %d원입니다.", MIN_AMOUNT_PER_USE));
         }
-        if(useAmount > this.amount) {
+        if(useAmount > this.balance) {
             throw new IllegalArgumentException("잔액이 부족합니다.");
         }
     }
