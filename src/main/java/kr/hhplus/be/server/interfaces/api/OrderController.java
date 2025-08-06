@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import jakarta.validation.Valid;
 import kr.hhplus.be.server.application.usecase.OrderCreateUseCase;
 import kr.hhplus.be.server.application.usecase.dto.command.OrderCreateCommand;
 import kr.hhplus.be.server.common.response.CommonResponse;
@@ -54,10 +55,11 @@ public class OrderController {
     )
     @PostMapping(value = "/api/v1/orders")
     public CommonResponse<OrderResponse> create(
-            @RequestBody OrderCreateRequest orderCreateRequest
+            @RequestBody @Valid OrderCreateRequest orderCreateRequest
     ) {
         OrderCreateCommand command = new OrderCreateCommand(
                 orderCreateRequest.userId(),
+                orderCreateRequest.userCouponId(),
                 orderCreateRequest.orderProductList(),
                 orderCreateRequest.shippingAddress(),
                 orderCreateRequest.recipientNumber()

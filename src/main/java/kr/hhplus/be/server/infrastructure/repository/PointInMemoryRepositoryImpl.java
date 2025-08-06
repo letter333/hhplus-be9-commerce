@@ -58,4 +58,9 @@ public class PointInMemoryRepositoryImpl implements PointRepository {
                 .findFirst()
                 .map(PointMapper::toPoint);
     }
+
+    @Override
+    public void deleteAll() {
+
+    }
 }

@@ -21,47 +21,30 @@ import java.util.concurrent.locks.ReentrantLock;
 public class CouponIssueUseCase {
     private final CouponRepository couponRepository;
     private final UserCouponRepository userCouponRepository;
-    private final Map<Long, ReentrantLock> lockMap = new ConcurrentHashMap<>();
-    private static final Long DEFAULT_TIMEOUT_SECONDS = 10L;
 
 
     @Transactional
     public UserCoupon execute(CouponIssueCommand command) {
-        ReentrantLock lock = lockMap.computeIfAbsent(command.couponId(), k -> new ReentrantLock(true));
+        Coupon coupon = couponRepository.findByIdWithLock(command.couponId())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 쿠폰입니다."));
 
-        try {
-            if(lock.tryLock(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-                try {
-                    Coupon coupon = couponRepository.findById(command.couponId())
-                            .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 쿠폰입니다."));
+        validateDuplicateIssue(command.couponId(), command.userId());
 
-                    validateDuplicateIssue(command.couponId(), command.userId());
+        coupon.issue();
 
-                    coupon.issue();
+        String couponCode = generateCouponCode();
 
-                    String couponCode = generateCouponCode();
+        UserCoupon userCoupon = UserCoupon.builder()
+                .userId(command.userId())
+                .couponId(command.couponId())
+                .couponCode(couponCode)
+                .status(UserCouponStatus.ISSUED)
+                .expiredAt(coupon.getExpiredAt())
+                .build();
 
-                    UserCoupon userCoupon = UserCoupon.builder()
-                            .userId(command.userId())
-                            .couponId(command.couponId())
-                            .couponCode(couponCode)
-                            .status(UserCouponStatus.ISSUED)
-                            .expiredAt(coupon.getExpiredAt())
-                            .build();
+        couponRepository.save(coupon);
 
-                    couponRepository.save(coupon);
-
-                    return userCouponRepository.save(userCoupon);
-                } finally {
-                    lock.unlock();
-                }
-            } else {
-                throw new IllegalStateException("쿠폰 발급이 지연되고 있습니다. 잠시 후 다시 시도해주세요.");
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("쿠폰 발급 중 문제가 발생했습니다.");
-        }
+        return userCouponRepository.save(userCoupon);
     }
 
     private void validateDuplicateIssue(Long couponId, Long userId) {

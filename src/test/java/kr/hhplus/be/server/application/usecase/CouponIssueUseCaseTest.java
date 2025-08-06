@@ -15,17 +15,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import static org.mockito.BDDMockito.*;
 import static org.assertj.core.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("쿠폰 발급 단위 테스트")
 class CouponIssueUseCaseTest {
     @Mock
     private CouponRepository couponRepository;
@@ -38,7 +35,7 @@ class CouponIssueUseCaseTest {
 
     @Nested
     @DisplayName("쿠폰 발급 테스트")
-    class CouponIssueTest  {
+    class CouponIssueTest {
         @Test
         @DisplayName("쿠폰 발급 성공")
         void 쿠폰_발급() {
@@ -51,21 +48,22 @@ class CouponIssueUseCaseTest {
                     .id(couponId)
                     .name("테스트 쿠폰")
                     .type(CouponType.PERCENTAGE)
-                    .discountPercentage(10L)
-                    .quantity(500)
+                    .discountAmount(10L)
+                    .quantity(100)
                     .issuedQuantity(0)
-                    .expiredAt(ZonedDateTime.now().plusDays(30))
+                    .expiredAt(LocalDateTime.now().plusDays(30))
                     .build();
+
             UserCoupon userCoupon = UserCoupon.builder()
                     .id(1L)
                     .userId(userId)
                     .couponId(couponId)
                     .couponCode("ABCD-1234-5678-0123")
                     .status(UserCouponStatus.ISSUED)
-                    .expiredAt(ZonedDateTime.now().plusDays(30))
+                    .expiredAt(LocalDateTime.now().plusDays(30))
                     .build();
 
-            when(couponRepository.findById(couponId)).thenReturn(Optional.of(coupon));
+            when(couponRepository.findByIdWithLock(couponId)).thenReturn(Optional.of(coupon));
             when(userCouponRepository.existsByCouponIdAndUserId(couponId, userId)).thenReturn(false);
             when(couponRepository.save(any(Coupon.class))).thenReturn(coupon);
             when(userCouponRepository.save(any(UserCoupon.class))).thenReturn(userCoupon);
@@ -79,14 +77,12 @@ class CouponIssueUseCaseTest {
             assertThat(result.getCouponId()).isEqualTo(couponId);
             assertThat(result.getStatus()).isEqualTo(UserCouponStatus.ISSUED);
             assertThat(result.getCouponCode()).isNotBlank();
-
             assertThat(coupon.getIssuedQuantity()).isEqualTo(1);
 
-            verify(couponRepository).findById(couponId);
+            verify(couponRepository).findByIdWithLock(couponId);
             verify(userCouponRepository).existsByCouponIdAndUserId(couponId, userId);
             verify(couponRepository).save(coupon);
             verify(userCouponRepository).save(any(UserCoupon.class));
-
         }
 
         @Test
@@ -97,14 +93,45 @@ class CouponIssueUseCaseTest {
             Long userId = 100L;
             CouponIssueCommand command = new CouponIssueCommand(couponId, userId);
 
-            when(couponRepository.findById(couponId)).thenReturn(Optional.empty());
+            when(couponRepository.findByIdWithLock(couponId)).thenReturn(Optional.empty());
 
             // when & then
             assertThatThrownBy(() -> couponIssueUseCase.execute(command))
                     .isInstanceOf(IllegalArgumentException.class);
 
-            verify(couponRepository).findById(couponId);
+            verify(couponRepository).findByIdWithLock(couponId);
             verifyNoInteractions(userCouponRepository);
+        }
+
+        @Test
+        @DisplayName("이미 발급받은 쿠폰 재발급 시도 시 실패")
+        void 이미_발급받은_쿠폰_재발급() {
+            // given
+            Long couponId = 1L;
+            Long userId = 100L;
+            CouponIssueCommand command = new CouponIssueCommand(couponId, userId);
+
+            Coupon coupon = Coupon.builder()
+                    .id(couponId)
+                    .name("테스트 쿠폰")
+                    .type(CouponType.PERCENTAGE)
+                    .discountAmount(10L)
+                    .quantity(100)
+                    .issuedQuantity(10)
+                    .expiredAt(LocalDateTime.now().plusDays(30))
+                    .build();
+
+            when(couponRepository.findByIdWithLock(couponId)).thenReturn(Optional.of(coupon));
+            when(userCouponRepository.existsByCouponIdAndUserId(couponId, userId)).thenReturn(true);
+
+            // when & then
+            assertThatThrownBy(() -> couponIssueUseCase.execute(command))
+                    .isInstanceOf(IllegalArgumentException.class);
+
+            verify(couponRepository).findByIdWithLock(couponId);
+            verify(userCouponRepository).existsByCouponIdAndUserId(couponId, userId);
+            verify(couponRepository, never()).save(any());
+            verify(userCouponRepository, never()).save(any());
         }
 
         @Test
@@ -119,20 +146,20 @@ class CouponIssueUseCaseTest {
                     .id(couponId)
                     .name("테스트 쿠폰")
                     .type(CouponType.PERCENTAGE)
-                    .discountPercentage(10L)
-                    .quantity(500)
-                    .issuedQuantity(500)
-                    .expiredAt(ZonedDateTime.now().plusDays(30))
+                    .discountAmount(10L)
+                    .quantity(100)
+                    .issuedQuantity(100)
+                    .expiredAt(LocalDateTime.now().plusDays(30))
                     .build();
 
-            when(couponRepository.findById(couponId)).thenReturn(Optional.of(soldOutCoupon));
+            when(couponRepository.findByIdWithLock(couponId)).thenReturn(Optional.of(soldOutCoupon));
             when(userCouponRepository.existsByCouponIdAndUserId(couponId, userId)).thenReturn(false);
 
             // when & then
             assertThatThrownBy(() -> couponIssueUseCase.execute(command))
                     .isInstanceOf(IllegalArgumentException.class);
 
-            verify(couponRepository).findById(couponId);
+            verify(couponRepository).findByIdWithLock(couponId);
             verify(userCouponRepository).existsByCouponIdAndUserId(couponId, userId);
             verify(couponRepository, never()).save(any());
             verify(userCouponRepository, never()).save(any());
@@ -150,20 +177,20 @@ class CouponIssueUseCaseTest {
                     .id(couponId)
                     .name("만료된 쿠폰")
                     .type(CouponType.PERCENTAGE)
-                    .discountPercentage(10L)
+                    .discountAmount(10L)
                     .quantity(100)
                     .issuedQuantity(50)
-                    .expiredAt(ZonedDateTime.now().minusDays(1))
+                    .expiredAt(LocalDateTime.now().minusDays(1))
                     .build();
 
-            when(couponRepository.findById(couponId)).thenReturn(Optional.of(expiredCoupon));
+            when(couponRepository.findByIdWithLock(couponId)).thenReturn(Optional.of(expiredCoupon));
             when(userCouponRepository.existsByCouponIdAndUserId(couponId, userId)).thenReturn(false);
 
             // when & then
             assertThatThrownBy(() -> couponIssueUseCase.execute(command))
                     .isInstanceOf(IllegalArgumentException.class);
 
-            verify(couponRepository).findById(couponId);
+            verify(couponRepository).findByIdWithLock(couponId);
             verify(userCouponRepository).existsByCouponIdAndUserId(couponId, userId);
             verify(couponRepository, never()).save(any());
             verify(userCouponRepository, never()).save(any());
@@ -178,13 +205,13 @@ class CouponIssueUseCaseTest {
                     .id(couponId)
                     .name("테스트 쿠폰")
                     .type(CouponType.PERCENTAGE)
-                    .discountPercentage(10L)
+                    .discountAmount(10L)
                     .quantity(100)
-                    .issuedQuantity(50)
-                    .expiredAt(ZonedDateTime.now().plusDays(30))
+                    .issuedQuantity(0)
+                    .expiredAt(LocalDateTime.now().plusDays(30))
                     .build();
 
-            when(couponRepository.findById(couponId)).thenReturn(Optional.of(mockCoupon));
+            when(couponRepository.findByIdWithLock(couponId)).thenReturn(Optional.of(mockCoupon));
             when(userCouponRepository.existsByCouponIdAndUserId(eq(couponId), any())).thenReturn(false);
             when(couponRepository.save(any(Coupon.class))).thenReturn(mockCoupon);
             when(userCouponRepository.save(any(UserCoupon.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -200,60 +227,7 @@ class CouponIssueUseCaseTest {
 
             // then
             assertThat(generatedCodes).hasSize(10);
-        }
-    }
-
-    @Nested
-    @DisplayName("동시성 제어 테스트")
-    class ConcurrencyControlTest {
-
-        @Test
-        @DisplayName("같은 쿠폰에 대한 동시 발급 요청 시 순차 처리")
-        void 같은_쿠폰_동시_발급_순차_처리() throws InterruptedException {
-            // given
-            Long couponId = 1L;
-            Coupon mockCoupon = Coupon.builder()
-                    .id(couponId)
-                    .name("테스트 쿠폰")
-                    .type(CouponType.PERCENTAGE)
-                    .discountPercentage(10L)
-                    .quantity(500)
-                    .issuedQuantity(0)
-                    .expiredAt(ZonedDateTime.now().plusDays(30))
-                    .build();
-
-            when(couponRepository.findById(couponId)).thenReturn(Optional.of(mockCoupon));
-            when(userCouponRepository.existsByCouponIdAndUserId(eq(couponId), any())).thenReturn(false);
-            when(couponRepository.save(any(Coupon.class))).thenReturn(mockCoupon);
-            when(userCouponRepository.save(any(UserCoupon.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-            int threadCount = 500;
-            ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
-            CountDownLatch latch = new CountDownLatch(threadCount);
-            List<UserCoupon> results = Collections.synchronizedList(new ArrayList<>());
-
-            // when
-            for (int i = 0; i < threadCount; i++) {
-                final long userId = i + 1L;
-                executorService.submit(() -> {
-                    try {
-                        CouponIssueCommand command = new CouponIssueCommand(couponId, userId);
-                        UserCoupon result = couponIssueUseCase.execute(command);
-                        results.add(result);
-                    } catch (Exception e) {
-
-                    } finally {
-                        latch.countDown();
-                    }
-                });
-            }
-
-            latch.await(10, TimeUnit.SECONDS);
-            executorService.shutdown();
-
-            // then
-            assertThat(results).hasSize(threadCount);
-            assertThat(mockCoupon.getIssuedQuantity()).isEqualTo(threadCount);
+            assertThat(mockCoupon.getIssuedQuantity()).isEqualTo(10);
         }
     }
 }

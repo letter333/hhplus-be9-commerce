@@ -4,7 +4,9 @@ import kr.hhplus.be.server.application.usecase.dto.command.PaymentProcessCommand
 import kr.hhplus.be.server.domain.model.*;
 import kr.hhplus.be.server.domain.repository.OrderRepository;
 import kr.hhplus.be.server.domain.repository.PaymentRepository;
+import kr.hhplus.be.server.domain.repository.PointHistoryRepository;
 import kr.hhplus.be.server.domain.repository.PointRepository;
+import kr.hhplus.be.server.domain.service.ExternalPaymentDataPlatformService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +30,12 @@ class PaymentProcessUseCaseTest {
     @Mock
     private PointRepository pointRepository;
 
+    @Mock
+    private PointHistoryRepository pointHistoryRepository;
+
+    @Mock
+    private ExternalPaymentDataPlatformService externalPaymentDataPlatformService;
+
     @InjectMocks
     private PaymentProcessUseCase paymentProcessUseCase;
 
@@ -50,10 +58,10 @@ class PaymentProcessUseCaseTest {
 
         Point mockPoint = Point.builder()
                 .userId(userId)
-                .amount(initialPoints)
+                .balance(initialPoints)
                 .build();
 
-        given(orderRepository.findById(orderId)).willReturn(Optional.of(mockOrder));
+        given(orderRepository.findByIdWithLock(orderId)).willReturn(Optional.of(mockOrder));
         given(pointRepository.findByUserId(userId)).willReturn(Optional.of(mockPoint));
         given(paymentRepository.save(any(Payment.class))).willAnswer(invocation -> invocation.getArgument(0));
 
@@ -64,9 +72,9 @@ class PaymentProcessUseCaseTest {
         assertThat(resultPayment.getStatus()).isEqualTo(PaymentStatus.SUCCESS);
         assertThat(resultPayment.getAmount()).isEqualTo(finalPrice);
         assertThat(mockOrder.getStatus()).isEqualTo(OrderStatus.PAID);
-        assertThat(mockPoint.getAmount()).isEqualTo(initialPoints - finalPrice);
+        assertThat(mockPoint.getBalance()).isEqualTo(initialPoints - finalPrice);
 
-        then(orderRepository).should().findById(orderId);
+        then(orderRepository).should().findByIdWithLock(orderId);
         then(pointRepository).should().findByUserId(userId);
         then(pointRepository).should().save(mockPoint);
         then(orderRepository).should().save(mockOrder);
@@ -79,7 +87,7 @@ class PaymentProcessUseCaseTest {
         // given
         long nonExistentOrderId = 999L;
         PaymentProcessCommand command = new PaymentProcessCommand(1L, nonExistentOrderId, PaymentMethod.POINT);
-        given(orderRepository.findById(nonExistentOrderId)).willReturn(Optional.empty());
+        given(orderRepository.findByIdWithLock(nonExistentOrderId)).willReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> paymentProcessUseCase.execute(command))
@@ -109,10 +117,10 @@ class PaymentProcessUseCaseTest {
         long insufficientPoints = 40_000L;
         Point mockPoint = Point.builder()
                 .userId(userId)
-                .amount(insufficientPoints)
+                .balance(insufficientPoints)
                 .build();
 
-        when(orderRepository.findById(orderId)).thenReturn(Optional.of(mockOrder));
+        when(orderRepository.findByIdWithLock(orderId)).thenReturn(Optional.of(mockOrder));
         when(pointRepository.findByUserId(userId)).thenReturn(Optional.of(mockPoint));
 
         // when & then

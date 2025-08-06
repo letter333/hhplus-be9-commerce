@@ -9,12 +9,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.hhplus.be.server.mock.common.Response;
 import kr.hhplus.be.server.mock.coupon.dto.CouponResponse;
-import kr.hhplus.be.server.mock.coupon.dto.IssueCouponRequest;
-import kr.hhplus.be.server.mock.coupon.dto.IssueCouponResponse;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -79,7 +76,7 @@ public class MockCouponController {
                         null,
                         CouponResponse.status.ISSUED,
                         null,
-                        ZonedDateTime.of(2025, 7, 31, 0, 0, 0, 0, ZoneId.of("Asia/Seoul")),
+                        LocalDateTime.of(2025, 7, 31, 0, 0, 0, 0),
                         null)
         );
 
@@ -92,7 +89,7 @@ public class MockCouponController {
                         null,
                         CouponResponse.status.ISSUED,
                         null,
-                        ZonedDateTime.of(2025, 7, 31, 0, 0, 0, 0, ZoneId.of("Asia/Seoul")),
+                        LocalDateTime.of(2025, 7, 31, 0, 0, 0, 0),
                         null)
         );
 

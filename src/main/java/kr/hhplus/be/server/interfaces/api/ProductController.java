@@ -5,18 +5,21 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import jakarta.validation.Valid;
 import kr.hhplus.be.server.application.usecase.ProductGetListUseCase;
 import kr.hhplus.be.server.application.usecase.ProductGetUseCase;
+import kr.hhplus.be.server.application.usecase.ProductRegisterUseCase;
+import kr.hhplus.be.server.application.usecase.dto.command.ProductRegisterCommand;
 import kr.hhplus.be.server.common.response.CommonResponse;
 import kr.hhplus.be.server.domain.model.Product;
+import kr.hhplus.be.server.interfaces.dto.request.ProductRegisterRequest;
 import kr.hhplus.be.server.interfaces.dto.response.ProductListResponse;
+import kr.hhplus.be.server.interfaces.dto.response.ProductRegisterResponse;
 import kr.hhplus.be.server.interfaces.dto.response.ProductResponse;
 import kr.hhplus.be.server.interfaces.mapper.ProductResponseMapper;
 import kr.hhplus.be.server.mock.common.Response;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -25,6 +28,7 @@ import java.util.List;
 public class ProductController {
     private final ProductGetUseCase productGetUseCase;
     private final ProductGetListUseCase productGetListUseCase;
+    private final ProductRegisterUseCase productRegisterUseCase;
 
     @Operation(summary = "단일 상품 조회", description = "상품 ID를 이용해 조회")
     @ApiResponse(
@@ -64,5 +68,27 @@ public class ProductController {
         List<Product> products = productGetListUseCase.execute();
 
         return CommonResponse.ok(new ProductListResponse(products));
+    }
+
+    @PostMapping("/api/v1/products")
+    public CommonResponse<ProductRegisterResponse> registerProduct(@RequestBody @Valid ProductRegisterRequest request) {
+        ProductRegisterCommand command = new ProductRegisterCommand(
+                request.name(),
+                request.description(),
+                request.price(),
+                request.stock()
+        );
+
+        Product product = productRegisterUseCase.execute(command);
+
+        ProductRegisterResponse productRegisterResponse = new ProductRegisterResponse(
+                product.getId(),
+                product.getName(),
+                product.getDescription(),
+                product.getPrice(),
+                product.getStock()
+        );
+
+        return CommonResponse.ok("상품 등록에 성공했습니다.", productRegisterResponse);
     }
 }

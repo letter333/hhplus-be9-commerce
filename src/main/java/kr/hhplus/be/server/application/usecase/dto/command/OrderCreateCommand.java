@@ -7,6 +7,7 @@ import java.util.List;
 
 public record OrderCreateCommand(
         Long userId,
+        Long userCouponId,
         List<OrderProduct> orderProductList,
         Address shippingAddress,
         String recipientNumber
