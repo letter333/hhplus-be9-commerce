@@ -7,6 +7,7 @@ import kr.hhplus.be.server.infrastructure.mapper.PaymentMapper;
 import org.springframework.stereotype.Repository;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -37,5 +38,10 @@ public class PaymentInMemoryRepositoryImpl implements PaymentRepository {
         }
 
         return PaymentMapper.toPayment(savedEntity);
+    }
+
+    @Override
+    public List<Payment> saveAll(List<Payment> payments) {
+        return List.of();
     }
 }
