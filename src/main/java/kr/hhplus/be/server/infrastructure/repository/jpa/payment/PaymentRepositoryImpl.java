@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 @Primary
 @RequiredArgsConstructor
@@ -20,5 +22,16 @@ public class PaymentRepositoryImpl implements PaymentRepository {
         PaymentEntity savedEntity = paymentJpaRepository.save(paymentEntity);
 
         return PaymentMapper.toPayment(savedEntity);
+    }
+
+    @Override
+    public List<Payment> saveAll(List<Payment> payments) {
+        List<PaymentEntity> paymentEntities = payments.stream()
+                .map(PaymentMapper::toPaymentEntity)
+                .toList();
+        List<PaymentEntity> savedEntities = paymentJpaRepository.saveAll(paymentEntities);
+        return savedEntities.stream()
+                .map(PaymentMapper::toPayment)
+                .toList();
     }
 }
