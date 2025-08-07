@@ -62,7 +62,7 @@ public class ProductInMemoryRepositoryImpl implements ProductRepository {
     }
 
     @Override
-    public List<Product> findByIdsWithLock(List<Long> ids) {
+    public List<Product> findByIdsWithPessimisticLock(List<Long> ids) {
         return List.of();
     }
 
