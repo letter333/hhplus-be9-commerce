@@ -15,6 +15,7 @@ public class OrderMapper {
                 .finalPrice(orderEntity.getFinalPrice())
                 .shippingAddress(new Address(orderEntity.getShippingAddress1(), orderEntity.getShippingAddress2(), orderEntity.getShippingZipCode()))
                 .recipientNumber(orderEntity.getRecipientNumber())
+                .version(orderEntity.getVersion())
                 .build();
     }
 
@@ -30,6 +31,7 @@ public class OrderMapper {
                 .shippingAddress2(order.getShippingAddress().shippingAddress2())
                 .shippingZipCode(order.getShippingAddress().shippingZipCode())
                 .recipientNumber(order.getRecipientNumber())
+                .version(order.getVersion())
                 .build();
     }
 }
