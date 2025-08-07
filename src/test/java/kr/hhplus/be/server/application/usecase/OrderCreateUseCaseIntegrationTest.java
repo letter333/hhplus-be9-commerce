@@ -16,6 +16,7 @@ import org.testcontainers.utility.TestcontainersConfiguration;
 import static org.assertj.core.api.Assertions.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -486,4 +487,91 @@ public class OrderCreateUseCaseIntegrationTest {
         }
     }
 
+    @Test
+    @DisplayName("여러 상품 동시 주문 시 모든 상품 재고가 정확히 감소한다")
+    void 여러_상품_동시_주문_재고_제어() throws InterruptedException {
+        // given
+        int threadCount = 5;
+        int product1InitialStock = 20;
+        int product2InitialStock = 15;
+        int orderQuantityPerThread = 3;
+
+        Product product1 = Product.builder()
+                .name("상품1")
+                .description("상품 설명1")
+                .price(10000L)
+                .stock(product1InitialStock)
+                .build();
+
+        Product product2 = Product.builder()
+                .name("상품2")
+                .description("상품 설명2")
+                .price(20000L)
+                .stock(product2InitialStock)
+                .build();
+
+        Product savedProduct1 = productRepository.save(product1);
+        Product savedProduct2 = productRepository.save(product2);
+
+        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger failureCount = new AtomicInteger(0);
+
+        // when
+        for (int i = 0; i < threadCount; i++) {
+            final long userId = i + 1L;
+            executorService.submit(() -> {
+                try {
+                    List<OrderProduct> orderProductList = List.of(
+                            OrderProduct.builder()
+                                    .productId(savedProduct1.getId())
+                                    .quantity(orderQuantityPerThread)
+                                    .build(),
+                            OrderProduct.builder()
+                                    .productId(savedProduct2.getId())
+                                    .quantity(orderQuantityPerThread)
+                                    .build()
+                    );
+
+                    Address shippingAddress = new Address("서울시 강남구", "테헤란로 123", "12345");
+                    OrderCreateCommand command = new OrderCreateCommand(
+                            userId,
+                            null,
+                            orderProductList,
+                            shippingAddress,
+                            "010-1234-5678"
+                    );
+
+                    orderCreateUseCase.execute(command);
+                    successCount.incrementAndGet();
+
+                } catch (Exception e) {
+                    failureCount.incrementAndGet();
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+
+        latch.await(30, TimeUnit.SECONDS);
+        executorService.shutdown();
+
+        // then
+        int expectedSuccessCount = Math.min(product1InitialStock / orderQuantityPerThread,
+                product2InitialStock / orderQuantityPerThread);
+        int expectedFailureCount = threadCount - expectedSuccessCount;
+
+        assertThat(successCount.get()).isEqualTo(expectedSuccessCount);
+        assertThat(failureCount.get()).isEqualTo(expectedFailureCount);
+
+        Product updatedProduct1 = productRepository.findById(savedProduct1.getId()).orElseThrow();
+        Product updatedProduct2 = productRepository.findById(savedProduct2.getId()).orElseThrow();
+
+        assertThat(updatedProduct1.getStock()).isEqualTo(product1InitialStock - (expectedSuccessCount * orderQuantityPerThread));
+        assertThat(updatedProduct2.getStock()).isEqualTo(product2InitialStock - (expectedSuccessCount * orderQuantityPerThread));
+
+        List<Order> savedOrders = orderRepository.findAll();
+        assertThat(savedOrders).hasSize(expectedSuccessCount);
+    }
 }
