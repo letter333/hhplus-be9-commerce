@@ -39,7 +39,9 @@ public class OrderCancelUseCase {
         Map<Long, Integer> stockRestoreMap = orderProducts.stream()
                 .collect(Collectors.groupingBy(OrderProduct::getProductId, Collectors.summingInt(OrderProduct::getQuantity)));
 
-        List<Product> productsToRestore = productRepository.findAllByIdIn(stockRestoreMap.keySet().stream().toList());
+        List<Long> sortedProductIds = stockRestoreMap.keySet().stream().sorted().toList();
+
+        List<Product> productsToRestore = productRepository.findByIdsWithPessimisticLock(sortedProductIds);
 
         productsToRestore.forEach(product -> {
             int quantity = stockRestoreMap.get(product.getId());
