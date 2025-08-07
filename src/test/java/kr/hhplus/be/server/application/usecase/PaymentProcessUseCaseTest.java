@@ -61,7 +61,7 @@ class PaymentProcessUseCaseTest {
                 .balance(initialPoints)
                 .build();
 
-        given(orderRepository.findByIdWithLock(orderId)).willReturn(Optional.of(mockOrder));
+        given(orderRepository.findById(orderId)).willReturn(Optional.of(mockOrder));
         given(pointRepository.findByUserId(userId)).willReturn(Optional.of(mockPoint));
         given(paymentRepository.save(any(Payment.class))).willAnswer(invocation -> invocation.getArgument(0));
 
@@ -74,7 +74,7 @@ class PaymentProcessUseCaseTest {
         assertThat(mockOrder.getStatus()).isEqualTo(OrderStatus.PAID);
         assertThat(mockPoint.getBalance()).isEqualTo(initialPoints - finalPrice);
 
-        then(orderRepository).should().findByIdWithLock(orderId);
+        then(orderRepository).should().findById(orderId);
         then(pointRepository).should().findByUserId(userId);
         then(pointRepository).should().save(mockPoint);
         then(orderRepository).should().save(mockOrder);
@@ -87,7 +87,7 @@ class PaymentProcessUseCaseTest {
         // given
         long nonExistentOrderId = 999L;
         PaymentProcessCommand command = new PaymentProcessCommand(1L, nonExistentOrderId, PaymentMethod.POINT);
-        given(orderRepository.findByIdWithLock(nonExistentOrderId)).willReturn(Optional.empty());
+        given(orderRepository.findById(nonExistentOrderId)).willReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> paymentProcessUseCase.execute(command))
@@ -120,7 +120,7 @@ class PaymentProcessUseCaseTest {
                 .balance(insufficientPoints)
                 .build();
 
-        when(orderRepository.findByIdWithLock(orderId)).thenReturn(Optional.of(mockOrder));
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(mockOrder));
         when(pointRepository.findByUserId(userId)).thenReturn(Optional.of(mockPoint));
 
         // when & then
