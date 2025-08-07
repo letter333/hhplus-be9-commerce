@@ -63,7 +63,7 @@ class OrderCancelUseCaseTest {
             when(orderRepository.findByStatusAndCreatedAtBefore(eq(OrderStatus.PENDING), any(LocalDateTime.class)))
                     .thenReturn(targetOrders);
             when(orderProductRepository.findByOrderIdIn(List.of(1L, 2L))).thenReturn(orderProducts);
-            when(productRepository.findAllByIdIn(anyList())).thenReturn(productsToRestore);
+            when(productRepository.findByIdsWithPessimisticLock(anyList())).thenReturn(productsToRestore);
 
             // when
             orderCancelUseCase.execute();
