@@ -347,7 +347,7 @@ public class OrderCreateUseCaseIntegrationTest {
     }
 
     @Nested
-    @DisplayName("동시성 제어 테스트")
+    @DisplayName("주문 동시성 제어 테스트")
     class ConcurrencyControlTest {
 
         @Test
