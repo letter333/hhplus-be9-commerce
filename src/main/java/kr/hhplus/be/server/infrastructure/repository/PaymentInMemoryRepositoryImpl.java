@@ -44,4 +44,19 @@ public class PaymentInMemoryRepositoryImpl implements PaymentRepository {
     public List<Payment> saveAll(List<Payment> payments) {
         return List.of();
     }
+
+    @Override
+    public List<Payment> findByOrderId(Long id) {
+        return List.of();
+    }
+
+    @Override
+    public List<Payment> findAll() {
+        return List.of();
+    }
+
+    @Override
+    public void deleteAll() {
+
+    }
 }
