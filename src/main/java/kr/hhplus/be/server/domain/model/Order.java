@@ -19,9 +19,10 @@ public class Order {
     private Address shippingAddress;
     private String recipientNumber;
     private LocalDateTime createdAt;
+    private Long version;
 
     @Builder
-    public Order(Long id, Long userId, Long userCouponId, OrderStatus status, List<OrderProduct> orderProducts, Long totalPrice, Long discountAmount, Long finalPrice, Address shippingAddress, String recipientNumber, LocalDateTime createdAt) {
+    public Order(Long id, Long userId, Long userCouponId, OrderStatus status, List<OrderProduct> orderProducts, Long totalPrice, Long discountAmount, Long finalPrice, Address shippingAddress, String recipientNumber, LocalDateTime createdAt, Long version) {
         this.id = id;
         this.userId = userId;
         this.userCouponId = userCouponId;
@@ -33,6 +34,7 @@ public class Order {
         this.shippingAddress = shippingAddress;
         this.recipientNumber = recipientNumber;
         this.createdAt = createdAt;
+        this.version = version;
     }
 
     public void cancel() {

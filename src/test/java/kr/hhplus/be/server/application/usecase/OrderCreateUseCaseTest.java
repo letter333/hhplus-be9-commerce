@@ -62,7 +62,7 @@ class OrderCreateUseCaseTest {
             Product product2 = Product.builder().id(2L).name("상품2").price(20000L).stock(5).build();
             List<Product> products = List.of(product1, product2);
 
-            when(productRepository.findByIdsWithLock(List.of(1L, 2L))).thenReturn(products);
+            when(productRepository.findByIdsWithPessimisticLock(List.of(1L, 2L))).thenReturn(products);
             when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
             // when
@@ -76,7 +76,7 @@ class OrderCreateUseCaseTest {
             assertThat(product1.getStock()).isEqualTo(5);
             assertThat(product2.getStock()).isEqualTo(4);
 
-            verify(productRepository, times(1)).findByIdsWithLock(List.of(1L, 2L));
+            verify(productRepository, times(1)).findByIdsWithPessimisticLock(List.of(1L, 2L));
             verify(productRepository, times(1)).saveAll(products);
             verify(orderRepository, times(1)).save(any(Order.class));
         }
@@ -91,13 +91,13 @@ class OrderCreateUseCaseTest {
             String recipientNumber = "010-1234-5678";
             OrderCreateCommand command = new OrderCreateCommand(userId, null, orderProductList, shippingAddress, recipientNumber);
 
-            when(productRepository.findByIdsWithLock(List.of(1L))).thenReturn(Collections.emptyList());
+            when(productRepository.findByIdsWithPessimisticLock(List.of(1L))).thenReturn(Collections.emptyList());
 
             // when & then
             assertThatThrownBy(() -> orderCreateUseCase.execute(command))
                     .isInstanceOf(IllegalArgumentException.class);
 
-            verify(productRepository).findByIdsWithLock(List.of(1L));
+            verify(productRepository).findByIdsWithPessimisticLock(List.of(1L));
             verify(orderRepository, never()).save(any(Order.class));
             verify(productRepository, never()).saveAll(anyList());
         }
@@ -113,13 +113,13 @@ class OrderCreateUseCaseTest {
             OrderCreateCommand command = new OrderCreateCommand(userId, null, orderProductList, shippingAddress, recipientNumber);
 
             Product product = Product.builder().id(1L).name("상품1").price(10000L).stock(5).build();
-            when(productRepository.findByIdsWithLock(List.of(1L))).thenReturn(List.of(product));
+            when(productRepository.findByIdsWithPessimisticLock(List.of(1L))).thenReturn(List.of(product));
 
             // when & then
             assertThatThrownBy(() -> orderCreateUseCase.execute(command))
                     .isInstanceOf(IllegalStateException.class);
 
-            verify(productRepository).findByIdsWithLock(List.of(1L));
+            verify(productRepository).findByIdsWithPessimisticLock(List.of(1L));
             verify(orderRepository, never()).save(any(Order.class));
         }
     }
@@ -143,7 +143,7 @@ class OrderCreateUseCaseTest {
             Coupon coupon = new Coupon(couponId, "3000원 할인 쿠폰", CouponType.FIXED, 3000L, 100, 10, LocalDateTime.now().plusDays(10), LocalDateTime.now());
             UserCoupon userCoupon = new UserCoupon(userCouponId, userId, couponId, "coupon-code", UserCouponStatus.ISSUED, null, null, null);
 
-            given(productRepository.findByIdsWithLock(List.of(1L))).willReturn(List.of(product));
+            given(productRepository.findByIdsWithPessimisticLock(List.of(1L))).willReturn(List.of(product));
             given(userCouponRepository.findById(userCouponId)).willReturn(Optional.of(userCoupon));
             given(couponRepository.findById(couponId)).willReturn(Optional.of(coupon));
             given(orderRepository.save(any(Order.class))).willAnswer(invocation -> invocation.getArgument(0));
@@ -175,7 +175,7 @@ class OrderCreateUseCaseTest {
             Coupon coupon = new Coupon(couponId, "10% 할인 쿠폰", CouponType.PERCENTAGE, 10L, 100, 10, LocalDateTime.now().plusDays(10), LocalDateTime.now());
             UserCoupon userCoupon = new UserCoupon(userCouponId, userId, couponId, "coupon-code", UserCouponStatus.ISSUED, null, null, null);
 
-            given(productRepository.findByIdsWithLock(List.of(1L))).willReturn(List.of(product));
+            given(productRepository.findByIdsWithPessimisticLock(List.of(1L))).willReturn(List.of(product));
             given(userCouponRepository.findById(userCouponId)).willReturn(Optional.of(userCoupon));
             given(couponRepository.findById(couponId)).willReturn(Optional.of(coupon));
             given(orderRepository.save(any(Order.class))).willThrow(new RuntimeException("DB 저장 실패"));

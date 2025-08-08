@@ -18,7 +18,12 @@ class PointTest {
         @DisplayName("포인트 충전 성공")
         void 포인트_충전() {
             //given
-            Point point = new Point(1L, 1L, 10000L);
+            Point point = Point.builder()
+                    .id(1L)
+                    .userId(1L)
+                    .balance(10000L)
+                    .build();
+
             Long chargeAmount = 10000L;
             Long expectedAmount = 20000L;
 
@@ -34,7 +39,11 @@ class PointTest {
         @DisplayName("유효하지 않은 입력값이면 예외 처리")
         void 유효하지_않은_입력값(Long chargeAmount) {
             //given
-            Point point = new Point(1L, 1L, 0L);
+            Point point = Point.builder()
+                    .id(1L)
+                    .userId(1L)
+                    .balance(0L)
+                    .build();
 
             //when & then
             assertThatThrownBy(() -> point.charge(chargeAmount))
@@ -49,7 +58,12 @@ class PointTest {
         @DisplayName("포인트 사용 성공")
         void 포인트_사용() {
             //given
-            Point point = new Point(1L, 1L, 10000L);
+            Point point = Point.builder()
+                    .id(1L)
+                    .userId(1L)
+                    .balance(10000L)
+                    .build();
+
             Long useAmount = 10000L;
             Long expectedAmount = 0L;
 
@@ -65,7 +79,11 @@ class PointTest {
         @DisplayName("유효하지 않은 입력값이면 예외 처리")
         void 유효하지_않은_입력값(Long useAmount) {
             //given
-            Point point = new Point(1L, 1L, 10000L);
+            Point point = Point.builder()
+                    .id(1L)
+                    .userId(1L)
+                    .balance(10000L)
+                    .build();
 
             //when & then
             assertThatThrownBy(() -> point.use(useAmount))

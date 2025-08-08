@@ -9,6 +9,7 @@ public class PointMapper {
                 .id(pointEntity.getId())
                 .userId(pointEntity.getUserId())
                 .balance(pointEntity.getBalance())
+                .version(pointEntity.getVersion())
                 .build();
     }
 
@@ -17,6 +18,7 @@ public class PointMapper {
                 .id(point.getId())
                 .userId(point.getUserId())
                 .balance(point.getBalance())
+                .version(point.getVersion())
                 .build();
     }
 }

@@ -32,11 +32,11 @@ public class ProductRepositoryImpl implements ProductRepository {
     }
 
     @Override
-    public List<Product> findByIdsWithLock(List<Long> ids) {
+    public List<Product> findByIdsWithPessimisticLock(List<Long> ids) {
         return productJpaRepository.findByIdsWithPessimisticLock(ids)
                 .stream()
                 .map(ProductMapper::toProduct)
-                .collect(Collectors.toList());
+                .toList();
     }
 
 

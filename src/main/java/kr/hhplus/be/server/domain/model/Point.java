@@ -8,6 +8,7 @@ public class Point {
     private Long id;
     private Long userId;
     private Long balance;
+    private Long version;
 
     private static final Long MAX_AMOUNT_PER_CHARGE = 1_000_000L;
     private static final Long MAX_TOTAL_AMOUNT = 10_000_000L;
@@ -16,10 +17,11 @@ public class Point {
 
 
     @Builder
-    public Point(Long id, Long userId, Long balance) {
+    public Point(Long id, Long userId, Long balance, Long version) {
         this.id = id;
         this.userId = userId;
         this.balance = balance;
+        this.version = version;
     }
 
     public void charge(Long chargeAmount) {

@@ -47,7 +47,7 @@ public class CouponInMemoryRepositoryImpl implements CouponRepository {
     }
 
     @Override
-    public Optional<Coupon> findByIdWithLock(Long id) {
+    public Optional<Coupon> findByIdWithPessimisticLock(Long id) {
         return Optional.empty();
     }
 

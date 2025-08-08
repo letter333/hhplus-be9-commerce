@@ -34,4 +34,23 @@ public class PaymentRepositoryImpl implements PaymentRepository {
                 .map(PaymentMapper::toPayment)
                 .toList();
     }
+
+    @Override
+    public List<Payment> findByOrderId(Long id) {
+        List<PaymentEntity> paymentEntities = paymentJpaRepository.findByOrderId(id);
+
+        return paymentEntities.stream().map(PaymentMapper::toPayment).toList();
+    }
+
+    @Override
+    public List<Payment> findAll() {
+        List<PaymentEntity> paymentEntities = paymentJpaRepository.findAll();
+
+        return paymentEntities.stream().map(PaymentMapper::toPayment).toList();
+    }
+
+    @Override
+    public void deleteAll() {
+        paymentJpaRepository.deleteAll();
+    }
 }

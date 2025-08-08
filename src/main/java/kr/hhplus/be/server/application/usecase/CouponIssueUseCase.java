@@ -10,11 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 @RequiredArgsConstructor
@@ -25,7 +21,7 @@ public class CouponIssueUseCase {
 
     @Transactional
     public UserCoupon execute(CouponIssueCommand command) {
-        Coupon coupon = couponRepository.findByIdWithLock(command.couponId())
+        Coupon coupon = couponRepository.findByIdWithPessimisticLock(command.couponId())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 쿠폰입니다."));
 
         validateDuplicateIssue(command.couponId(), command.userId());

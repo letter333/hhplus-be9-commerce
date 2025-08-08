@@ -23,7 +23,7 @@ public class CouponRepositoryImpl implements CouponRepository {
     }
 
     @Override
-    public Optional<Coupon> findByIdWithLock(Long id) {
+    public Optional<Coupon> findByIdWithPessimisticLock(Long id) {
         return couponJpaRepository.findByIdWithPessimisticLock(id)
                 .map(CouponMapper::toCoupon);
     }
