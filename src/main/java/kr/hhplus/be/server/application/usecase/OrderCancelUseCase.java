@@ -8,6 +8,9 @@ import kr.hhplus.be.server.domain.repository.OrderProductRepository;
 import kr.hhplus.be.server.domain.repository.OrderRepository;
 import kr.hhplus.be.server.domain.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +27,10 @@ public class OrderCancelUseCase {
     private final ProductRepository productRepository;
     private static final int CANCEL_MINUTE = 30;
 
+    @Retryable(
+            retryFor = {ObjectOptimisticLockingFailureException.class},
+            backoff = @Backoff(delay = 100, multiplier = 2.0)
+    )
     @Transactional
     public void execute() {
         LocalDateTime threshold = LocalDateTime.now().minusMinutes(CANCEL_MINUTE);
