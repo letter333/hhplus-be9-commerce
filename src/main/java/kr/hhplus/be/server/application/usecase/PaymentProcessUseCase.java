@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.application.usecase;
 
+import kr.hhplus.be.server.application.event.PaymentSuccessEvent;
 import kr.hhplus.be.server.application.usecase.dto.command.PaymentProcessCommand;
 import kr.hhplus.be.server.domain.model.*;
 import kr.hhplus.be.server.domain.repository.OrderRepository;
@@ -9,6 +10,7 @@ import kr.hhplus.be.server.domain.repository.PointRepository;
 import kr.hhplus.be.server.domain.service.ExternalPaymentDataPlatformService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
@@ -26,7 +28,7 @@ public class PaymentProcessUseCase {
     private final OrderRepository orderRepository;
     private final PointRepository pointRepository;
     private final PointHistoryRepository pointHistoryRepository;
-    private final ExternalPaymentDataPlatformService externalPaymentDataPlatformService;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Retryable(
             retryFor = {ObjectOptimisticLockingFailureException.class},
@@ -73,7 +75,7 @@ public class PaymentProcessUseCase {
                 .build();
 
         Payment savedPayment = paymentRepository.save(payment);
-        externalPaymentDataPlatformService.sendPaymentInfo(savedPayment);
+        applicationEventPublisher.publishEvent(new PaymentSuccessEvent(savedPayment));
 
         return savedPayment;
     }

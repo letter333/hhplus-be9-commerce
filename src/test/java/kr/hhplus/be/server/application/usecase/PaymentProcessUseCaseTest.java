@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.application.usecase;
 
+import kr.hhplus.be.server.application.event.PaymentSuccessEvent;
 import kr.hhplus.be.server.application.usecase.dto.command.PaymentProcessCommand;
 import kr.hhplus.be.server.domain.model.*;
 import kr.hhplus.be.server.domain.repository.OrderRepository;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.Optional;
 
@@ -34,7 +36,7 @@ class PaymentProcessUseCaseTest {
     private PointHistoryRepository pointHistoryRepository;
 
     @Mock
-    private ExternalPaymentDataPlatformService externalPaymentDataPlatformService;
+    private ApplicationEventPublisher applicationEventPublisher;
 
     @InjectMocks
     private PaymentProcessUseCase paymentProcessUseCase;
@@ -79,6 +81,7 @@ class PaymentProcessUseCaseTest {
         then(pointRepository).should().save(mockPoint);
         then(orderRepository).should().save(mockOrder);
         then(paymentRepository).should().save(any(Payment.class));
+        then(applicationEventPublisher).should().publishEvent(any(PaymentSuccessEvent.class));
     }
 
     @Test
