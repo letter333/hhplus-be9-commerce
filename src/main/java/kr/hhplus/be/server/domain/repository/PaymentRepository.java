@@ -7,4 +7,10 @@ import java.util.List;
 public interface PaymentRepository {
     Payment save(Payment payment);
     List<Payment> saveAll(List<Payment> payments);
+
+    List<Payment> findByOrderId(Long id);
+
+    List<Payment> findAll();
+
+    void deleteAll();
 }

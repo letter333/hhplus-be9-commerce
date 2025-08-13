@@ -27,9 +27,9 @@ public class OrderCreateUseCase {
                 .map(OrderProduct::getProductId)
                 .distinct()
                 .sorted()
-                .collect(Collectors.toList());
+                .toList();
 
-        List<Product> products = productRepository.findByIdsWithLock(sortedProductIds);
+        List<Product> products = productRepository.findByIdsWithPessimisticLock(sortedProductIds);
 
         if (products.size() != sortedProductIds.size()) {
             throw new IllegalArgumentException("존재하지 않는 상품이 포함되어 있습니다.");
