@@ -1,12 +1,14 @@
 package kr.hhplus.be.server.application.usecase;
 
 import kr.hhplus.be.server.application.usecase.dto.command.CouponIssueCommand;
+import kr.hhplus.be.server.domain.component.RedissonLockManager;
 import kr.hhplus.be.server.domain.model.Coupon;
 import kr.hhplus.be.server.domain.model.CouponType;
 import kr.hhplus.be.server.domain.model.UserCoupon;
 import kr.hhplus.be.server.domain.model.UserCouponStatus;
 import kr.hhplus.be.server.domain.repository.CouponRepository;
 import kr.hhplus.be.server.domain.repository.UserCouponRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -14,9 +16,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.redisson.api.RLock;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import static org.mockito.BDDMockito.*;
 import static org.assertj.core.api.Assertions.*;
@@ -30,8 +36,29 @@ class CouponIssueUseCaseTest {
     @Mock
     private UserCouponRepository userCouponRepository;
 
+    @Mock
+    private TransactionTemplate transactionTemplate;
+
+    @Mock
+    private RedissonLockManager redissonLockManager;
+
+    @Mock
+    private RLock rLock;
+
     @InjectMocks
     private CouponIssueUseCase couponIssueUseCase;
+
+    @BeforeEach
+    void setUp() throws InterruptedException {
+        when(redissonLockManager.getLock(anyString())).thenReturn(rLock);
+        when(rLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class))).thenReturn(true);
+        when(rLock.isHeldByCurrentThread()).thenReturn(true);
+
+        doAnswer(invocation -> {
+            TransactionCallback<?> callback = invocation.getArgument(0);
+            return callback.doInTransaction(null);
+        }).when(transactionTemplate).execute(any(TransactionCallback.class));
+    }
 
     @Nested
     @DisplayName("쿠폰 발급 테스트")
@@ -63,7 +90,7 @@ class CouponIssueUseCaseTest {
                     .expiredAt(LocalDateTime.now().plusDays(30))
                     .build();
 
-            when(couponRepository.findByIdWithLock(couponId)).thenReturn(Optional.of(coupon));
+            when(couponRepository.findById(couponId)).thenReturn(Optional.of(coupon));
             when(userCouponRepository.existsByCouponIdAndUserId(couponId, userId)).thenReturn(false);
             when(couponRepository.save(any(Coupon.class))).thenReturn(coupon);
             when(userCouponRepository.save(any(UserCoupon.class))).thenReturn(userCoupon);
@@ -79,7 +106,7 @@ class CouponIssueUseCaseTest {
             assertThat(result.getCouponCode()).isNotBlank();
             assertThat(coupon.getIssuedQuantity()).isEqualTo(1);
 
-            verify(couponRepository).findByIdWithLock(couponId);
+            verify(couponRepository).findById(couponId);
             verify(userCouponRepository).existsByCouponIdAndUserId(couponId, userId);
             verify(couponRepository).save(coupon);
             verify(userCouponRepository).save(any(UserCoupon.class));
@@ -93,13 +120,13 @@ class CouponIssueUseCaseTest {
             Long userId = 100L;
             CouponIssueCommand command = new CouponIssueCommand(couponId, userId);
 
-            when(couponRepository.findByIdWithLock(couponId)).thenReturn(Optional.empty());
+            when(couponRepository.findById(couponId)).thenReturn(Optional.empty());
 
             // when & then
             assertThatThrownBy(() -> couponIssueUseCase.execute(command))
                     .isInstanceOf(IllegalArgumentException.class);
 
-            verify(couponRepository).findByIdWithLock(couponId);
+            verify(couponRepository).findById(couponId);
             verifyNoInteractions(userCouponRepository);
         }
 
@@ -121,14 +148,14 @@ class CouponIssueUseCaseTest {
                     .expiredAt(LocalDateTime.now().plusDays(30))
                     .build();
 
-            when(couponRepository.findByIdWithLock(couponId)).thenReturn(Optional.of(coupon));
+            when(couponRepository.findById(couponId)).thenReturn(Optional.of(coupon));
             when(userCouponRepository.existsByCouponIdAndUserId(couponId, userId)).thenReturn(true);
 
             // when & then
             assertThatThrownBy(() -> couponIssueUseCase.execute(command))
                     .isInstanceOf(IllegalArgumentException.class);
 
-            verify(couponRepository).findByIdWithLock(couponId);
+            verify(couponRepository).findById(couponId);
             verify(userCouponRepository).existsByCouponIdAndUserId(couponId, userId);
             verify(couponRepository, never()).save(any());
             verify(userCouponRepository, never()).save(any());
@@ -152,14 +179,14 @@ class CouponIssueUseCaseTest {
                     .expiredAt(LocalDateTime.now().plusDays(30))
                     .build();
 
-            when(couponRepository.findByIdWithLock(couponId)).thenReturn(Optional.of(soldOutCoupon));
+            when(couponRepository.findById(couponId)).thenReturn(Optional.of(soldOutCoupon));
             when(userCouponRepository.existsByCouponIdAndUserId(couponId, userId)).thenReturn(false);
 
             // when & then
             assertThatThrownBy(() -> couponIssueUseCase.execute(command))
                     .isInstanceOf(IllegalArgumentException.class);
 
-            verify(couponRepository).findByIdWithLock(couponId);
+            verify(couponRepository).findById(couponId);
             verify(userCouponRepository).existsByCouponIdAndUserId(couponId, userId);
             verify(couponRepository, never()).save(any());
             verify(userCouponRepository, never()).save(any());
@@ -183,14 +210,14 @@ class CouponIssueUseCaseTest {
                     .expiredAt(LocalDateTime.now().minusDays(1))
                     .build();
 
-            when(couponRepository.findByIdWithLock(couponId)).thenReturn(Optional.of(expiredCoupon));
+            when(couponRepository.findById(couponId)).thenReturn(Optional.of(expiredCoupon));
             when(userCouponRepository.existsByCouponIdAndUserId(couponId, userId)).thenReturn(false);
 
             // when & then
             assertThatThrownBy(() -> couponIssueUseCase.execute(command))
                     .isInstanceOf(IllegalArgumentException.class);
 
-            verify(couponRepository).findByIdWithLock(couponId);
+            verify(couponRepository).findById(couponId);
             verify(userCouponRepository).existsByCouponIdAndUserId(couponId, userId);
             verify(couponRepository, never()).save(any());
             verify(userCouponRepository, never()).save(any());
@@ -211,7 +238,7 @@ class CouponIssueUseCaseTest {
                     .expiredAt(LocalDateTime.now().plusDays(30))
                     .build();
 
-            when(couponRepository.findByIdWithLock(couponId)).thenReturn(Optional.of(mockCoupon));
+            when(couponRepository.findById(couponId)).thenReturn(Optional.of(mockCoupon));
             when(userCouponRepository.existsByCouponIdAndUserId(eq(couponId), any())).thenReturn(false);
             when(couponRepository.save(any(Coupon.class))).thenReturn(mockCoupon);
             when(userCouponRepository.save(any(UserCoupon.class))).thenAnswer(invocation -> invocation.getArgument(0));
