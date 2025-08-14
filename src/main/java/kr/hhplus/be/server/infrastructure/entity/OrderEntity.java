@@ -46,8 +46,11 @@ public class OrderEntity extends BaseEntity {
     @Column(nullable = false)
     private String recipientNumber;
 
+    @Version
+    private Long version;
+
     @Builder
-    public OrderEntity(Long id, Long userId, Long userCouponId, OrderStatus status, Long totalPrice, Long discountAmount, Long finalPrice, String shippingAddress1, String shippingAddress2, String shippingZipCode, String recipientNumber) {
+    public OrderEntity(Long id, Long userId, Long userCouponId, OrderStatus status, Long totalPrice, Long discountAmount, Long finalPrice, String shippingAddress1, String shippingAddress2, String shippingZipCode, String recipientNumber, Long version) {
         this.id = id;
         this.userId = userId;
         this.userCouponId = userCouponId;
@@ -59,5 +62,6 @@ public class OrderEntity extends BaseEntity {
         this.shippingAddress2 = shippingAddress2;
         this.shippingZipCode = shippingZipCode;
         this.recipientNumber = recipientNumber;
+        this.version = version;
     }
 }
