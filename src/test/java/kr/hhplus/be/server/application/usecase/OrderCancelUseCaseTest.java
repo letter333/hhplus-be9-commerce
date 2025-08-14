@@ -1,6 +1,7 @@
 package kr.hhplus.be.server.application.usecase;
 
 
+import kr.hhplus.be.server.domain.component.RedissonLockManager;
 import kr.hhplus.be.server.domain.model.Order;
 import kr.hhplus.be.server.domain.model.OrderProduct;
 import kr.hhplus.be.server.domain.model.OrderStatus;
@@ -8,6 +9,7 @@ import kr.hhplus.be.server.domain.model.Product;
 import kr.hhplus.be.server.domain.repository.OrderProductRepository;
 import kr.hhplus.be.server.domain.repository.OrderRepository;
 import kr.hhplus.be.server.domain.repository.ProductRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -15,10 +17,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.redisson.api.RLock;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
@@ -35,8 +41,23 @@ class OrderCancelUseCaseTest {
     @Mock
     private ProductRepository productRepository;
 
+    @Mock
+    private TransactionTemplate transactionTemplate;
+
+    @Mock
+    private RedissonLockManager redissonLockManager;
+
+    @Mock
+    private RLock multiLock;
+
     @InjectMocks
     private OrderCancelUseCase orderCancelUseCase;
+
+    @BeforeEach
+    void setUp() throws InterruptedException {
+
+    }
+
 
     @Nested
     @DisplayName("주문 취소 실행 테스트")
@@ -44,8 +65,18 @@ class OrderCancelUseCaseTest {
 
         @Test
         @DisplayName("취소할 주문이 있을 경우 재고를 복구하고 주문 상태를 변경")
-        void 취소할_주문_존재() {
+        void 취소할_주문_존재() throws InterruptedException {
+
             // given
+            when(redissonLockManager.getMultiLock(anyList())).thenReturn(multiLock);
+            when(multiLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class))).thenReturn(true);
+
+            doAnswer(invocation -> {
+                Consumer<Object> consumer = invocation.getArgument(0, Consumer.class);
+                consumer.accept(null);
+                return null;
+            }).when(transactionTemplate).executeWithoutResult(any());
+
             LocalDateTime oldDate = LocalDateTime.now().minusMinutes(40);
             Order order1 = Order.builder().id(1L).status(OrderStatus.PENDING).createdAt(oldDate).build();
             Order order2 = Order.builder().id(2L).status(OrderStatus.PENDING).createdAt(oldDate).build();
@@ -63,7 +94,7 @@ class OrderCancelUseCaseTest {
             when(orderRepository.findByStatusAndCreatedAtBefore(eq(OrderStatus.PENDING), any(LocalDateTime.class)))
                     .thenReturn(targetOrders);
             when(orderProductRepository.findByOrderIdIn(List.of(1L, 2L))).thenReturn(orderProducts);
-            when(productRepository.findAllByIdIn(anyList())).thenReturn(productsToRestore);
+            when(productRepository.findByIdsWithPessimisticLock(anyList())).thenReturn(productsToRestore);
 
             // when
             orderCancelUseCase.execute();
@@ -91,7 +122,7 @@ class OrderCancelUseCaseTest {
 
             // then
             verify(orderProductRepository, never()).findByOrderIdIn(anyList());
-            verify(productRepository, never()).findAllByIdIn(anyList());
+            verify(productRepository, never()).findByIdsWithPessimisticLock(anyList());
             verify(productRepository, never()).saveAll(anyList());
             verify(orderRepository, never()).saveAll(anyList());
         }
