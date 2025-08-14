@@ -1,20 +1,28 @@
 package kr.hhplus.be.server.application.usecase;
 
+import kr.hhplus.be.server.application.event.PaymentSuccessEvent;
 import kr.hhplus.be.server.application.usecase.dto.command.PaymentProcessCommand;
+import kr.hhplus.be.server.domain.component.RedissonLockManager;
 import kr.hhplus.be.server.domain.model.*;
 import kr.hhplus.be.server.domain.repository.OrderRepository;
 import kr.hhplus.be.server.domain.repository.PaymentRepository;
 import kr.hhplus.be.server.domain.repository.PointHistoryRepository;
 import kr.hhplus.be.server.domain.repository.PointRepository;
 import kr.hhplus.be.server.domain.service.ExternalPaymentDataPlatformService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.redisson.api.RLock;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static org.mockito.BDDMockito.*;
 import static org.assertj.core.api.Assertions.*;
@@ -34,10 +42,31 @@ class PaymentProcessUseCaseTest {
     private PointHistoryRepository pointHistoryRepository;
 
     @Mock
-    private ExternalPaymentDataPlatformService externalPaymentDataPlatformService;
+    private ApplicationEventPublisher applicationEventPublisher;
+
+    @Mock
+    private TransactionTemplate transactionTemplate;
+
+    @Mock
+    private RedissonLockManager redissonLockManager;
+
+    @Mock
+    private RLock rLock;
 
     @InjectMocks
     private PaymentProcessUseCase paymentProcessUseCase;
+
+    @BeforeEach
+    void setUp() throws InterruptedException {
+        when(redissonLockManager.getLock(anyString())).thenReturn(rLock);
+        when(rLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class))).thenReturn(true);
+        when(rLock.isHeldByCurrentThread()).thenReturn(true);
+
+        doAnswer(invocation -> {
+            TransactionCallback<?> callback = invocation.getArgument(0);
+            return callback.doInTransaction(null);
+        }).when(transactionTemplate).execute(any(TransactionCallback.class));
+    }
 
     @Test
     @DisplayName("포인트 결제 성공")
@@ -61,7 +90,7 @@ class PaymentProcessUseCaseTest {
                 .balance(initialPoints)
                 .build();
 
-        given(orderRepository.findByIdWithLock(orderId)).willReturn(Optional.of(mockOrder));
+        given(orderRepository.findById(orderId)).willReturn(Optional.of(mockOrder));
         given(pointRepository.findByUserId(userId)).willReturn(Optional.of(mockPoint));
         given(paymentRepository.save(any(Payment.class))).willAnswer(invocation -> invocation.getArgument(0));
 
@@ -74,11 +103,12 @@ class PaymentProcessUseCaseTest {
         assertThat(mockOrder.getStatus()).isEqualTo(OrderStatus.PAID);
         assertThat(mockPoint.getBalance()).isEqualTo(initialPoints - finalPrice);
 
-        then(orderRepository).should().findByIdWithLock(orderId);
+        then(orderRepository).should().findById(orderId);
         then(pointRepository).should().findByUserId(userId);
         then(pointRepository).should().save(mockPoint);
         then(orderRepository).should().save(mockOrder);
         then(paymentRepository).should().save(any(Payment.class));
+        then(applicationEventPublisher).should().publishEvent(any(PaymentSuccessEvent.class));
     }
 
     @Test
@@ -87,7 +117,7 @@ class PaymentProcessUseCaseTest {
         // given
         long nonExistentOrderId = 999L;
         PaymentProcessCommand command = new PaymentProcessCommand(1L, nonExistentOrderId, PaymentMethod.POINT);
-        given(orderRepository.findByIdWithLock(nonExistentOrderId)).willReturn(Optional.empty());
+        given(orderRepository.findById(nonExistentOrderId)).willReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> paymentProcessUseCase.execute(command))
@@ -120,7 +150,7 @@ class PaymentProcessUseCaseTest {
                 .balance(insufficientPoints)
                 .build();
 
-        when(orderRepository.findByIdWithLock(orderId)).thenReturn(Optional.of(mockOrder));
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(mockOrder));
         when(pointRepository.findByUserId(userId)).thenReturn(Optional.of(mockPoint));
 
         // when & then
