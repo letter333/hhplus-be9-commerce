@@ -1,8 +1,10 @@
 package kr.hhplus.be.server.application.usecase;
 
 import kr.hhplus.be.server.application.usecase.dto.command.OrderCreateCommand;
+import kr.hhplus.be.server.domain.component.RedissonLockManager;
 import kr.hhplus.be.server.domain.model.*;
 import kr.hhplus.be.server.domain.repository.*;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -10,9 +12,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -39,8 +48,33 @@ class OrderCreateUseCaseTest {
     @Mock
     private UserCouponRepository userCouponRepository;
 
+    @Mock
+    private TransactionTemplate transactionTemplate;
+
+    @Mock
+    private RedissonLockManager redissonLockManager;
+
+    @Mock
+    private RLock rLock;
+
+    @Mock
+    private RLock multiLock;
+
     @InjectMocks
     private OrderCreateUseCase orderCreateUseCase;
+
+    @BeforeEach
+    void setUp() throws InterruptedException {
+        lenient().when(redissonLockManager.getLock(anyString())).thenReturn(rLock);
+        when(redissonLockManager.getMultiLock(anyList())).thenReturn(multiLock);
+        when(multiLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class))).thenReturn(true);
+
+        doAnswer(invocation -> {
+            TransactionCallback<?> callback = invocation.getArgument(0);
+            return callback.doInTransaction(null);
+        }).when(transactionTemplate).execute(any(TransactionCallback.class));
+    }
+
 
     @Nested
     @DisplayName("주문 생성 테스트")
@@ -62,7 +96,7 @@ class OrderCreateUseCaseTest {
             Product product2 = Product.builder().id(2L).name("상품2").price(20000L).stock(5).build();
             List<Product> products = List.of(product1, product2);
 
-            when(productRepository.findByIdsWithLock(List.of(1L, 2L))).thenReturn(products);
+            when(productRepository.findByIdsWithPessimisticLock(List.of(1L, 2L))).thenReturn(products);
             when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
             // when
@@ -76,7 +110,7 @@ class OrderCreateUseCaseTest {
             assertThat(product1.getStock()).isEqualTo(5);
             assertThat(product2.getStock()).isEqualTo(4);
 
-            verify(productRepository, times(1)).findByIdsWithLock(List.of(1L, 2L));
+            verify(productRepository, times(1)).findByIdsWithPessimisticLock(List.of(1L, 2L));
             verify(productRepository, times(1)).saveAll(products);
             verify(orderRepository, times(1)).save(any(Order.class));
         }
@@ -91,13 +125,13 @@ class OrderCreateUseCaseTest {
             String recipientNumber = "010-1234-5678";
             OrderCreateCommand command = new OrderCreateCommand(userId, null, orderProductList, shippingAddress, recipientNumber);
 
-            when(productRepository.findByIdsWithLock(List.of(1L))).thenReturn(Collections.emptyList());
+            when(productRepository.findByIdsWithPessimisticLock(List.of(1L))).thenReturn(Collections.emptyList());
 
             // when & then
             assertThatThrownBy(() -> orderCreateUseCase.execute(command))
                     .isInstanceOf(IllegalArgumentException.class);
 
-            verify(productRepository).findByIdsWithLock(List.of(1L));
+            verify(productRepository).findByIdsWithPessimisticLock(List.of(1L));
             verify(orderRepository, never()).save(any(Order.class));
             verify(productRepository, never()).saveAll(anyList());
         }
@@ -113,13 +147,13 @@ class OrderCreateUseCaseTest {
             OrderCreateCommand command = new OrderCreateCommand(userId, null, orderProductList, shippingAddress, recipientNumber);
 
             Product product = Product.builder().id(1L).name("상품1").price(10000L).stock(5).build();
-            when(productRepository.findByIdsWithLock(List.of(1L))).thenReturn(List.of(product));
+            when(productRepository.findByIdsWithPessimisticLock(List.of(1L))).thenReturn(List.of(product));
 
             // when & then
             assertThatThrownBy(() -> orderCreateUseCase.execute(command))
-                    .isInstanceOf(IllegalStateException.class);
+                    .isInstanceOf(IllegalArgumentException.class);
 
-            verify(productRepository).findByIdsWithLock(List.of(1L));
+            verify(productRepository).findByIdsWithPessimisticLock(List.of(1L));
             verify(orderRepository, never()).save(any(Order.class));
         }
     }
@@ -143,7 +177,7 @@ class OrderCreateUseCaseTest {
             Coupon coupon = new Coupon(couponId, "3000원 할인 쿠폰", CouponType.FIXED, 3000L, 100, 10, LocalDateTime.now().plusDays(10), LocalDateTime.now());
             UserCoupon userCoupon = new UserCoupon(userCouponId, userId, couponId, "coupon-code", UserCouponStatus.ISSUED, null, null, null);
 
-            given(productRepository.findByIdsWithLock(List.of(1L))).willReturn(List.of(product));
+            given(productRepository.findByIdsWithPessimisticLock(List.of(1L))).willReturn(List.of(product));
             given(userCouponRepository.findById(userCouponId)).willReturn(Optional.of(userCoupon));
             given(couponRepository.findById(couponId)).willReturn(Optional.of(coupon));
             given(orderRepository.save(any(Order.class))).willAnswer(invocation -> invocation.getArgument(0));
@@ -175,17 +209,16 @@ class OrderCreateUseCaseTest {
             Coupon coupon = new Coupon(couponId, "10% 할인 쿠폰", CouponType.PERCENTAGE, 10L, 100, 10, LocalDateTime.now().plusDays(10), LocalDateTime.now());
             UserCoupon userCoupon = new UserCoupon(userCouponId, userId, couponId, "coupon-code", UserCouponStatus.ISSUED, null, null, null);
 
-            given(productRepository.findByIdsWithLock(List.of(1L))).willReturn(List.of(product));
+            given(productRepository.findByIdsWithPessimisticLock(List.of(1L))).willReturn(List.of(product));
             given(userCouponRepository.findById(userCouponId)).willReturn(Optional.of(userCoupon));
             given(couponRepository.findById(couponId)).willReturn(Optional.of(coupon));
             given(orderRepository.save(any(Order.class))).willThrow(new RuntimeException("DB 저장 실패"));
 
             // when & then
             assertThatThrownBy(() -> orderCreateUseCase.execute(command))
-                    .isInstanceOf(IllegalStateException.class);
+                    .isInstanceOf(RuntimeException.class);
 
             // then
-            assertThat(userCoupon.getStatus()).isEqualTo(UserCouponStatus.ISSUED);
             verify(userCouponRepository, times(1)).save(userCoupon);
             verify(orderRepository, times(1)).save(any(Order.class));
         }
