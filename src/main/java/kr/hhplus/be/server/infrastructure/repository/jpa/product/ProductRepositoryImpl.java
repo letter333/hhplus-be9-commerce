@@ -8,9 +8,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Repository
 @Primary
@@ -32,11 +32,11 @@ public class ProductRepositoryImpl implements ProductRepository {
     }
 
     @Override
-    public List<Product> findByIdsWithLock(List<Long> ids) {
+    public List<Product> findByIdsWithPessimisticLock(List<Long> ids) {
         return productJpaRepository.findByIdsWithPessimisticLock(ids)
                 .stream()
                 .map(ProductMapper::toProduct)
-                .collect(Collectors.toList());
+                .toList();
     }
 
 
@@ -76,6 +76,11 @@ public class ProductRepositoryImpl implements ProductRepository {
                 .stream()
                 .map(ProductMapper::toProduct)
                 .toList();
+    }
+
+    @Override
+    public List<ProductJpaRepository.TopSellingProductView> findTopSellingProducts(LocalDateTime threeDaysAgoAtMidnight, Long limit) {
+        return productJpaRepository.findTopSellingProducts(threeDaysAgoAtMidnight, limit);
     }
 
     @Override

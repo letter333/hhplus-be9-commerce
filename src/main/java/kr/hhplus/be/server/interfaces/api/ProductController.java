@@ -7,8 +7,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import kr.hhplus.be.server.application.usecase.ProductGetListUseCase;
+import kr.hhplus.be.server.application.usecase.ProductGetTopSellingUseCase;
 import kr.hhplus.be.server.application.usecase.ProductGetUseCase;
 import kr.hhplus.be.server.application.usecase.ProductRegisterUseCase;
+import kr.hhplus.be.server.application.usecase.dto.TopSellingProduct;
 import kr.hhplus.be.server.application.usecase.dto.command.ProductRegisterCommand;
 import kr.hhplus.be.server.common.response.CommonResponse;
 import kr.hhplus.be.server.domain.model.Product;
@@ -16,6 +18,7 @@ import kr.hhplus.be.server.interfaces.dto.request.ProductRegisterRequest;
 import kr.hhplus.be.server.interfaces.dto.response.ProductListResponse;
 import kr.hhplus.be.server.interfaces.dto.response.ProductRegisterResponse;
 import kr.hhplus.be.server.interfaces.dto.response.ProductResponse;
+import kr.hhplus.be.server.interfaces.dto.response.TopSellingProductResponse;
 import kr.hhplus.be.server.interfaces.mapper.ProductResponseMapper;
 import kr.hhplus.be.server.mock.common.Response;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +32,7 @@ public class ProductController {
     private final ProductGetUseCase productGetUseCase;
     private final ProductGetListUseCase productGetListUseCase;
     private final ProductRegisterUseCase productRegisterUseCase;
+    private final ProductGetTopSellingUseCase productGetTopSellingUseCase;
 
     @Operation(summary = "단일 상품 조회", description = "상품 ID를 이용해 조회")
     @ApiResponse(
@@ -90,5 +94,19 @@ public class ProductController {
         );
 
         return CommonResponse.ok("상품 등록에 성공했습니다.", productRegisterResponse);
+    }
+
+    @GetMapping("/api/v1/products/top-selling")
+    public CommonResponse<List<TopSellingProductResponse>> getTopSellingProducts() {
+        List<TopSellingProduct> products = productGetTopSellingUseCase.execute();
+        List<TopSellingProductResponse> topProducts = products.stream()
+                .map(product -> new TopSellingProductResponse(
+                        product.productId(),
+                        product.productName(),
+                        product.totalQuantity(),
+                        product.salesRank()
+                )).toList();
+
+        return CommonResponse.ok(topProducts);
     }
 }

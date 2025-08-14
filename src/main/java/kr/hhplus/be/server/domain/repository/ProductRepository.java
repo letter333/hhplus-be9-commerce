@@ -1,17 +1,20 @@
 package kr.hhplus.be.server.domain.repository;
 
 import kr.hhplus.be.server.domain.model.Product;
+import kr.hhplus.be.server.infrastructure.repository.jpa.product.ProductJpaRepository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 public interface ProductRepository {
     Optional<Product> findById(Long id);
     Optional<Product> findByIdWithLock(Long id);
-    List<Product> findByIdsWithLock(List<Long> ids);
+    List<Product> findByIdsWithPessimisticLock(List<Long> ids);
     List<Product> findAll();
     Product save(Product product);
     List<Product> saveAll(List<Product> productList);
     List<Product> findAllByIdIn(List<Long> ids);
+    List<ProductJpaRepository.TopSellingProductView> findTopSellingProducts(LocalDateTime threeDaysAgoAtMidnight, Long limit);
     void deleteAll();
 }
