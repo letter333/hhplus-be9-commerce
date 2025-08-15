@@ -2,21 +2,27 @@ package kr.hhplus.be.server.application.usecase;
 
 import kr.hhplus.be.server.application.event.PaymentSuccessEvent;
 import kr.hhplus.be.server.application.usecase.dto.command.PaymentProcessCommand;
+import kr.hhplus.be.server.domain.component.RedissonLockManager;
 import kr.hhplus.be.server.domain.model.*;
 import kr.hhplus.be.server.domain.repository.OrderRepository;
 import kr.hhplus.be.server.domain.repository.PaymentRepository;
 import kr.hhplus.be.server.domain.repository.PointHistoryRepository;
 import kr.hhplus.be.server.domain.repository.PointRepository;
 import kr.hhplus.be.server.domain.service.ExternalPaymentDataPlatformService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.redisson.api.RLock;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static org.mockito.BDDMockito.*;
 import static org.assertj.core.api.Assertions.*;
@@ -38,8 +44,29 @@ class PaymentProcessUseCaseTest {
     @Mock
     private ApplicationEventPublisher applicationEventPublisher;
 
+    @Mock
+    private TransactionTemplate transactionTemplate;
+
+    @Mock
+    private RedissonLockManager redissonLockManager;
+
+    @Mock
+    private RLock rLock;
+
     @InjectMocks
     private PaymentProcessUseCase paymentProcessUseCase;
+
+    @BeforeEach
+    void setUp() throws InterruptedException {
+        when(redissonLockManager.getLock(anyString())).thenReturn(rLock);
+        when(rLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class))).thenReturn(true);
+        when(rLock.isHeldByCurrentThread()).thenReturn(true);
+
+        doAnswer(invocation -> {
+            TransactionCallback<?> callback = invocation.getArgument(0);
+            return callback.doInTransaction(null);
+        }).when(transactionTemplate).execute(any(TransactionCallback.class));
+    }
 
     @Test
     @DisplayName("포인트 결제 성공")

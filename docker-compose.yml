@@ -1,6 +1,7 @@
 version: '3'
 services:
   mysql:
+    container_name: hhplus-mysql
     image: mysql:8.0
     ports:
       - "3307:3306"
@@ -11,6 +12,14 @@ services:
       - MYSQL_DATABASE=hhplus
     volumes:
       - ./data/mysql/:/var/lib/mysql
+
+  redis:
+    container_name: hhplus-redis
+    image: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/redis/:/data
 
 networks:
   default:

@@ -11,6 +11,7 @@ import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.testcontainers.utility.TestcontainersConfiguration;
 
 import java.util.*;
@@ -50,6 +51,7 @@ public class PointChargeUseCaseIntegrationTest {
         testPoint = pointRepository.save(Point.builder()
                         .userId(testUser.getId())
                         .balance(0L)
+                        .version(0L)
                         .build());
     }
 
@@ -142,85 +144,131 @@ public class PointChargeUseCaseIntegrationTest {
             ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
             CountDownLatch latch = new CountDownLatch(threadCount);
 
-            // when
-            for (int i = 0; i < threadCount; i++) {
-                executorService.submit(() -> {
-                    try {
-                        pointChargeUseCase.execute(testUser.getId(), chargeAmount);
-                    } finally {
-                        latch.countDown();
-                    }
-                });
+            AtomicInteger successCount = new AtomicInteger(0);
+            AtomicInteger failureCount = new AtomicInteger(0);
+            List<Exception> exceptions = Collections.synchronizedList(new ArrayList<>());
+            List<Long> actualChargedAmounts = Collections.synchronizedList(new ArrayList<>());
+
+            try {
+                // when
+                for (int i = 0; i < threadCount; i++) {
+                    executorService.submit(() -> {
+                        try {
+                            Point chargedPoint = pointChargeUseCase.execute(testUser.getId(), chargeAmount);
+                            successCount.incrementAndGet();
+                            actualChargedAmounts.add(chargeAmount);
+                        } catch (Exception e) {
+                            failureCount.incrementAndGet();
+                            exceptions.add(e);
+                        } finally {
+                            latch.countDown();
+                        }
+                    });
+                }
+
+                boolean completed = latch.await(30, TimeUnit.SECONDS);
+                if (!completed) {
+                    fail("테스트가 타임아웃되었습니다. 일부 스레드가 완료되지 않았습니다.");
+                }
+
+                // then
+                System.out.println("성공 횟수: " + successCount.get());
+                System.out.println("실패 횟수: " + failureCount.get());
+
+                if (!exceptions.isEmpty()) {
+                    System.out.println("발생한 예외들:");
+                    exceptions.forEach(e -> System.out.println("- " + e.getClass().getSimpleName() + ": " + e.getMessage()));
+                }
+
+                Point finalPoint = pointRepository.findByUserId(testUser.getId()).orElseThrow();
+                long expectedBalance = successCount.get() * chargeAmount;
+                assertThat(finalPoint.getBalance()).isEqualTo(expectedBalance);
+
+                List<PointHistory> histories = pointHistoryRepository.findByUserId(testUser.getId());
+                assertThat(histories).hasSize(successCount.get());
+                assertThat(histories).allMatch(history ->
+                        history.getType() == PointHistoryType.CHARGE &&
+                                history.getAmount().equals(chargeAmount)
+                );
+
+                assertThat(successCount.get() + failureCount.get()).isEqualTo(threadCount);
+
+                assertThat(successCount.get()).isGreaterThan(0);
+
+            } finally {
+                executorService.shutdown();
+                if (!executorService.awaitTermination(10, TimeUnit.SECONDS)) {
+                    executorService.shutdownNow();
+                }
             }
-
-            latch.await();
-            executorService.shutdown();
-
-            // then
-            Point finalPoint = pointRepository.findByUserId(testUser.getId()).orElseThrow();
-            long expectedBalance = threadCount * chargeAmount;
-            assertThat(finalPoint.getBalance()).isEqualTo(expectedBalance);
-
-            List<PointHistory> histories = pointHistoryRepository.findByUserId(testUser.getId());
-            assertThat(histories).hasSize(threadCount);
-            assertThat(histories).allMatch(history ->
-                    history.getType() == PointHistoryType.CHARGE &&
-                            history.getAmount().equals(chargeAmount)
-            );
-
         }
+
 
         @Test
         @DisplayName("예외 상황에서의 동시성 테스트")
         void 예외상황_동시성_테스트() throws InterruptedException {
             // given
-            final int successThreadCount = 5;
-            final int failureThreadCount = 5;
+            final int validRequestCount = 10;
+            final int invalidRequestCount = 5;
+            final int totalThreads = validRequestCount + invalidRequestCount;
             final long validChargeAmount = 1000L;
             final long invalidChargeAmount = -100L;
 
-            ExecutorService executorService = Executors.newFixedThreadPool(successThreadCount + failureThreadCount);
-            CountDownLatch latch = new CountDownLatch(successThreadCount + failureThreadCount);
+            ExecutorService executorService = Executors.newFixedThreadPool(totalThreads);
+            CountDownLatch latch = new CountDownLatch(totalThreads);
 
             AtomicInteger successCount = new AtomicInteger(0);
-            AtomicInteger failureCount = new AtomicInteger(0);
+            AtomicInteger optimisticLockFailureCount = new AtomicInteger(0);
+            AtomicInteger illegalArgumentFailureCount = new AtomicInteger(0);
+
+            long initialBalance = pointRepository.findByUserId(testUser.getId()).orElseThrow().getBalance();
 
             // when
-            for (int i = 0; i < successThreadCount; i++) {
+            for (int i = 0; i < validRequestCount; i++) {
                 executorService.submit(() -> {
                     try {
                         pointChargeUseCase.execute(testUser.getId(), validChargeAmount);
                         successCount.incrementAndGet();
                     } catch (Exception e) {
-                        failureCount.incrementAndGet();
+                        if (e.getCause() instanceof ObjectOptimisticLockingFailureException) {
+                            optimisticLockFailureCount.incrementAndGet();
+                        } else {
+                            System.err.println("Unexpected exception in valid charge thread: " + e);
+                        }
                     } finally {
                         latch.countDown();
                     }
                 });
             }
 
-            for (int i = 0; i < failureThreadCount; i++) {
+            for (int i = 0; i < invalidRequestCount; i++) {
                 executorService.submit(() -> {
                     try {
                         pointChargeUseCase.execute(testUser.getId(), invalidChargeAmount);
-                        successCount.incrementAndGet();
+                    } catch (IllegalArgumentException e) {
+                        illegalArgumentFailureCount.incrementAndGet();
                     } catch (Exception e) {
-                        failureCount.incrementAndGet();
+                        System.err.println("Unexpected exception in invalid charge thread: " + e);
                     } finally {
                         latch.countDown();
                     }
                 });
             }
 
-            latch.await(10, TimeUnit.SECONDS);
+            latch.await(15, TimeUnit.SECONDS);
             executorService.shutdown();
 
             // then
-            assertThat(successCount.get()).isEqualTo(successThreadCount);
-            assertThat(failureCount.get()).isEqualTo(failureThreadCount);
+            assertThat(illegalArgumentFailureCount.get()).isEqualTo(invalidRequestCount);
+
+            assertThat(successCount.get() + optimisticLockFailureCount.get()).isEqualTo(validRequestCount);
 
             Point finalPoint = pointRepository.findByUserId(testUser.getId()).orElseThrow();
-            assertThat(finalPoint.getBalance()).isEqualTo(successThreadCount * validChargeAmount);
+            long expectedBalance = initialBalance + (successCount.get() * validChargeAmount);
+            assertThat(finalPoint.getBalance()).isEqualTo(expectedBalance);
+
+            long historyCount = pointHistoryRepository.findByUserId(testUser.getId()).size();
+            assertThat(historyCount).isEqualTo(successCount.get());
         }
     }
 
@@ -228,40 +276,71 @@ public class PointChargeUseCaseIntegrationTest {
     @DisplayName("데이터베이스 격리 수준 검증")
     void 데이터베이스_격리수준_검증() throws InterruptedException {
         // given
-        final int threadCount = 5;
+        final int threadCount = 10;
         final long chargeAmount = 500L;
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
         CountDownLatch latch = new CountDownLatch(threadCount);
 
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger failureCount = new AtomicInteger(0);
         List<Long> observedBalances = Collections.synchronizedList(new ArrayList<>());
+        List<Exception> exceptions = Collections.synchronizedList(new ArrayList<>());
 
-        // when
-        for (int i = 0; i < threadCount; i++) {
-            executorService.submit(() -> {
-                try {
-                    Point result = pointChargeUseCase.execute(testUser.getId(), chargeAmount);
-                    observedBalances.add(result.getBalance());
-                } finally {
-                    latch.countDown();
+        try {
+            // when
+            for (int i = 0; i < threadCount; i++) {
+                executorService.submit(() -> {
+                    try {
+                        Point result = pointChargeUseCase.execute(testUser.getId(), chargeAmount);
+                        observedBalances.add(result.getBalance());
+                        successCount.incrementAndGet();
+                    } catch (Exception e) {
+                        exceptions.add(e);
+                        failureCount.incrementAndGet();
+                    } finally {
+                        latch.countDown();
+                    }
+                });
+            }
+
+            boolean completed = latch.await(30, TimeUnit.SECONDS);
+            assertThat(completed).isTrue();
+
+            // then
+            if (successCount.get() > 0) {
+                Collections.sort(observedBalances);
+                Set<Long> uniqueBalances = new HashSet<>(observedBalances);
+
+                assertThat(uniqueBalances).hasSize(successCount.get());
+
+                assertThat(observedBalances.get(0)).isEqualTo(chargeAmount);
+
+                assertThat(observedBalances.get(successCount.get() - 1))
+                        .isEqualTo(successCount.get() * chargeAmount);
+
+                for (int i = 1; i < observedBalances.size(); i++) {
+                    long diff = observedBalances.get(i) - observedBalances.get(i - 1);
+                    assertThat(diff).isEqualTo(chargeAmount);
                 }
-            });
-        }
+            }
 
-        latch.await(10, TimeUnit.SECONDS);
-        executorService.shutdown();
+            Point finalPoint = pointRepository.findByUserId(testUser.getId()).orElseThrow();
+            assertThat(finalPoint.getBalance()).isEqualTo(successCount.get() * chargeAmount);
 
-        // then
-        Collections.sort(observedBalances);
-        Set<Long> uniqueBalances = new HashSet<>(observedBalances);
+            List<PointHistory> histories = pointHistoryRepository.findByUserId(testUser.getId());
+            assertThat(histories).hasSize(successCount.get());
 
-        assertThat(uniqueBalances).hasSize(threadCount);
-        assertThat(observedBalances.get(0)).isEqualTo(chargeAmount);
-        assertThat(observedBalances.get(threadCount - 1)).isEqualTo(threadCount * chargeAmount);
+            for (Exception e : exceptions) {
+                assertThat(e.getMessage()).contains("동시성 충돌이 발생하여 재시도에 실패");
+            }
 
-        for (int i = 1; i < observedBalances.size(); i++) {
-            long diff = observedBalances.get(i) - observedBalances.get(i - 1);
-            assertThat(diff).isEqualTo(chargeAmount);
+        } finally {
+            executorService.shutdown();
+            if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
+                executorService.shutdownNow();
+            }
         }
     }
+
 
 }

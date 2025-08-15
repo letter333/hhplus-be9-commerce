@@ -178,7 +178,7 @@ public class OrderCreateUseCaseIntegrationTest {
 
             // when & then
             assertThatThrownBy(() -> orderCreateUseCase.execute(command))
-                    .isInstanceOf(IllegalStateException.class);
+                    .isInstanceOf(IllegalArgumentException.class);
         }
     }
 
@@ -341,8 +341,7 @@ public class OrderCreateUseCaseIntegrationTest {
 
             // when & then
             assertThatThrownBy(() -> orderCreateUseCase.execute(command))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasCauseInstanceOf(IllegalArgumentException.class);
+                    .isInstanceOf(IllegalArgumentException.class);
 
         }
     }
@@ -479,7 +478,7 @@ public class OrderCreateUseCaseIntegrationTest {
 
             // when & then
             assertThatThrownBy(() -> orderCreateUseCase.execute(command))
-                    .isInstanceOf(IllegalStateException.class);
+                    .isInstanceOf(IllegalArgumentException.class);
 
             UserCoupon restoredUserCoupon = userCouponRepository.findById(savedUserCoupon.getId()).orElseThrow();
             assertThat(restoredUserCoupon.getStatus()).isEqualTo(UserCouponStatus.ISSUED);

@@ -36,12 +36,16 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.projectlombok:lombok")
+	implementation("org.springframework.retry:spring-retry")
 
 	// Springdoc
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0")
 
 	// DB
 	runtimeOnly("com.mysql:mysql-connector-j")
+
+	// Redisson
+	implementation("org.redisson:redisson-spring-boot-starter:3.46.0")
 
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")

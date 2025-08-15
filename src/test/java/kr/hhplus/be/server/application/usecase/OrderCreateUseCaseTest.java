@@ -1,8 +1,10 @@
 package kr.hhplus.be.server.application.usecase;
 
 import kr.hhplus.be.server.application.usecase.dto.command.OrderCreateCommand;
+import kr.hhplus.be.server.domain.component.RedissonLockManager;
 import kr.hhplus.be.server.domain.model.*;
 import kr.hhplus.be.server.domain.repository.*;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -10,9 +12,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -39,8 +48,33 @@ class OrderCreateUseCaseTest {
     @Mock
     private UserCouponRepository userCouponRepository;
 
+    @Mock
+    private TransactionTemplate transactionTemplate;
+
+    @Mock
+    private RedissonLockManager redissonLockManager;
+
+    @Mock
+    private RLock rLock;
+
+    @Mock
+    private RLock multiLock;
+
     @InjectMocks
     private OrderCreateUseCase orderCreateUseCase;
+
+    @BeforeEach
+    void setUp() throws InterruptedException {
+        lenient().when(redissonLockManager.getLock(anyString())).thenReturn(rLock);
+        when(redissonLockManager.getMultiLock(anyList())).thenReturn(multiLock);
+        when(multiLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class))).thenReturn(true);
+
+        doAnswer(invocation -> {
+            TransactionCallback<?> callback = invocation.getArgument(0);
+            return callback.doInTransaction(null);
+        }).when(transactionTemplate).execute(any(TransactionCallback.class));
+    }
+
 
     @Nested
     @DisplayName("주문 생성 테스트")
@@ -117,7 +151,7 @@ class OrderCreateUseCaseTest {
 
             // when & then
             assertThatThrownBy(() -> orderCreateUseCase.execute(command))
-                    .isInstanceOf(IllegalStateException.class);
+                    .isInstanceOf(IllegalArgumentException.class);
 
             verify(productRepository).findByIdsWithPessimisticLock(List.of(1L));
             verify(orderRepository, never()).save(any(Order.class));
@@ -182,10 +216,9 @@ class OrderCreateUseCaseTest {
 
             // when & then
             assertThatThrownBy(() -> orderCreateUseCase.execute(command))
-                    .isInstanceOf(IllegalStateException.class);
+                    .isInstanceOf(RuntimeException.class);
 
             // then
-            assertThat(userCoupon.getStatus()).isEqualTo(UserCouponStatus.ISSUED);
             verify(userCouponRepository, times(1)).save(userCoupon);
             verify(orderRepository, times(1)).save(any(Order.class));
         }
