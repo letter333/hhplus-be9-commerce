@@ -42,6 +42,14 @@ public class RedissonConfig {
                 calculateTTLUntilMidnight(),
                 TimeUnit.MINUTES.toMillis(30)
         ));
+        config.put("product", new CacheConfig(
+                TimeUnit.MINUTES.toMillis(5),
+                TimeUnit.MINUTES.toMillis(3)
+        ));
+        config.put("products", new CacheConfig(
+                TimeUnit.MINUTES.toMillis(30),
+                TimeUnit.MINUTES.toMillis(15)
+        ));
         return new RedissonSpringCacheManager(redissonClient, config);
     }
 
