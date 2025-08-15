@@ -40,7 +40,7 @@ public interface ProductJpaRepository extends JpaRepository<ProductEntity, Long>
         WHERE
             o.status = 'PAID'
             AND pay.status = 'SUCCESS'
-            AND o.created_at >= :since
+            AND o.updated_at >= :since
         GROUP BY p.id, p.name
         ORDER BY totalQuantity DESC
         LIMIT :limit
