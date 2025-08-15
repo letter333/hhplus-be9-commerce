@@ -5,9 +5,13 @@ import kr.hhplus.be.server.domain.component.RedissonLockManager;
 import kr.hhplus.be.server.domain.model.*;
 import kr.hhplus.be.server.domain.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.redisson.RedissonMultiLock;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -17,6 +21,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderCreateUseCase {
@@ -27,7 +32,9 @@ public class OrderCreateUseCase {
     private final UserCouponRepository userCouponRepository;
     private final TransactionTemplate transactionTemplate;
     private final RedissonLockManager redissonLockManager;
+    private final CacheManager cacheManager;
 
+    @CacheEvict(value = "products", key = "'all'")
     public Order execute(OrderCreateCommand command) {
         List<Long> sortedProductIds = command.orderProductList().stream()
                 .map(OrderProduct::getProductId)
@@ -71,7 +78,9 @@ public class OrderCreateUseCase {
                     totalPrice += product.getPrice() * orderProduct.getQuantity();
                 }
 
-                productRepository.saveAll(products);
+                List<Product> savedProductList = productRepository.saveAll(products);
+
+                evictProductCachesBatch(savedProductList);
 
                 if (command.userCouponId() != null && command.userCouponId() > 0) {
                     userCoupon = userCouponRepository.findById(command.userCouponId())
@@ -121,6 +130,19 @@ public class OrderCreateUseCase {
             if(isLocked) {
                 multilock.unlock();
             }
+        }
+    }
+
+    private void evictProductCachesBatch(List<Product> savedProductList) {
+        Cache productCache = cacheManager.getCache("product");
+        if (productCache != null && !savedProductList.isEmpty()) {
+            List<Long> productIds = savedProductList.stream()
+                    .map(Product::getId)
+                    .collect(Collectors.toList());
+
+            productIds.forEach(productCache::evict);
+
+            log.debug("주문 처리로 인한 상품 캐시 무효화: {}", productIds);
         }
     }
 }
