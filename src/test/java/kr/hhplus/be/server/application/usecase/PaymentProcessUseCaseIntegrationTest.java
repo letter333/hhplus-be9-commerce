@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.TestcontainersConfiguration;
 
 import static org.assertj.core.api.Assertions.*;
@@ -27,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
+@Testcontainers
 public class PaymentProcessUseCaseIntegrationTest {
 
     @Autowired

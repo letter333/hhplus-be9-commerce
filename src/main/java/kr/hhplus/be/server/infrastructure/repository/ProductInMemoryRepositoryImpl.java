@@ -4,8 +4,10 @@ import kr.hhplus.be.server.domain.model.Product;
 import kr.hhplus.be.server.domain.repository.ProductRepository;
 import kr.hhplus.be.server.infrastructure.entity.ProductEntity;
 import kr.hhplus.be.server.infrastructure.mapper.ProductMapper;
+import kr.hhplus.be.server.infrastructure.repository.jpa.product.ProductJpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -119,6 +121,11 @@ public class ProductInMemoryRepositoryImpl implements ProductRepository {
                 .filter(productEntity -> productEntity != null)
                 .map(ProductMapper::toProduct)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ProductJpaRepository.TopSellingProductView> findTopSellingProducts(LocalDateTime threeDaysAgoAtMidnight, Long limit) {
+        return List.of();
     }
 
     @Override
