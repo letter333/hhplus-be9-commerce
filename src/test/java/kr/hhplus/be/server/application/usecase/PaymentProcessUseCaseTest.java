@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.redisson.api.RLock;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.Optional;
@@ -63,9 +64,15 @@ class PaymentProcessUseCaseTest {
         when(rLock.isHeldByCurrentThread()).thenReturn(true);
 
         doAnswer(invocation -> {
-            TransactionCallback<?> callback = invocation.getArgument(0);
-            return callback.doInTransaction(null);
+            TransactionSynchronizationManager.initSynchronization();
+            try {
+                TransactionCallback<?> callback = invocation.getArgument(0);
+                return callback.doInTransaction(null);
+            } finally {
+                TransactionSynchronizationManager.clearSynchronization();
+            }
         }).when(transactionTemplate).execute(any(TransactionCallback.class));
+
     }
 
     @Test

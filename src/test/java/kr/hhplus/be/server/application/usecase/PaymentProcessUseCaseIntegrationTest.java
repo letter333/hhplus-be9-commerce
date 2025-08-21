@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.TestcontainersConfiguration;
 
@@ -49,6 +50,12 @@ public class PaymentProcessUseCaseIntegrationTest {
     @Autowired
     private PointHistoryRepository pointHistoryRepository;
 
+    @Autowired
+    private OrderProductRepository orderProductRepository;
+
+    @Autowired
+    private TransactionTemplate transactionTemplate;
+
     @MockitoBean
     private ExternalPaymentDataPlatformService externalPaymentDataPlatformService;
 
@@ -56,38 +63,61 @@ public class PaymentProcessUseCaseIntegrationTest {
     private Order testOrder;
     private Point testPoint;
 
-
     void setUp() {
-        testUser = User.builder()
-                .name("테스트 사용자")
-                .phoneNumber("010-1234-5678")
-                .build();
-        testUser = userRepository.save(testUser);
+        transactionTemplate.executeWithoutResult(status -> {
+            testUser = User.builder()
+                    .name("테스트 사용자")
+                    .phoneNumber("010-1234-5678")
+                    .build();
+            testUser = userRepository.save(testUser);
 
-        testPoint = Point.builder()
-                .userId(testUser.getId())
-                .balance(100000L)
-                .build();
-        testPoint = pointRepository.save(testPoint);
+            testPoint = Point.builder()
+                    .userId(testUser.getId())
+                    .balance(100000L)
+                    .build();
+            testPoint = pointRepository.save(testPoint);
 
-        Address testAddress = new Address(
-                "서울시 강남구 테헤란로",
-                "123번길 45",
-                "12345"
-        );
+            Address testAddress = new Address(
+                    "서울시 강남구 테헤란로",
+                    "123번길 45",
+                    "12345"
+            );
 
-        testOrder = Order.builder()
-                .userId(testUser.getId())
-                .status(OrderStatus.PENDING)
-                .orderProducts(List.of())
-                .totalPrice(50000L)
-                .discountAmount(0L)
-                .finalPrice(50000L)
-                .shippingAddress(testAddress)
-                .recipientNumber("010-9876-5432")
-                .createdAt(LocalDateTime.now())
-                .build();
-        testOrder = orderRepository.save(testOrder);
+            List<OrderProduct> orderProducts = new ArrayList<>();
+            orderProducts.add(OrderProduct.builder()
+                    .productId(1L)
+                    .quantity(1)
+                    .build());
+            orderProducts.add(OrderProduct.builder()
+                    .productId(2L)
+                    .quantity(10)
+                    .build());
+
+            testOrder = Order.builder()
+                    .userId(testUser.getId())
+                    .status(OrderStatus.PENDING)
+                    .orderProducts(orderProducts)
+                    .totalPrice(50000L)
+                    .discountAmount(0L)
+                    .finalPrice(50000L)
+                    .shippingAddress(testAddress)
+                    .recipientNumber("010-9876-5432")
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            testOrder = orderRepository.save(testOrder);
+
+            orderProducts = orderProducts.stream()
+                    .map(orderProduct -> {
+                        return OrderProduct.builder()
+                                .orderId(testOrder.getId())
+                                .productId(orderProduct.getProductId())
+                                .quantity(orderProduct.getQuantity())
+                                .price(10000L)
+                                .build();
+                    }).toList();
+
+            List<OrderProduct> savedOrderProducts = orderProductRepository.saveAll(orderProducts);
+        });
     }
 
     @AfterEach
@@ -344,10 +374,20 @@ public class PaymentProcessUseCaseIntegrationTest {
                         "12345"
                 );
 
+                List<OrderProduct> orderProducts = new ArrayList<>();
+                orderProducts.add(OrderProduct.builder()
+                        .productId(1L)
+                        .quantity(1)
+                        .build());
+                orderProducts.add(OrderProduct.builder()
+                        .productId(2L)
+                        .quantity(10)
+                        .build());
+
                 Order order = Order.builder()
                         .userId(savedUser.getId())
                         .status(OrderStatus.PENDING)
-                        .orderProducts(List.of())
+                        .orderProducts(orderProducts)
                         .totalPrice(30000L)
                         .discountAmount(0L)
                         .finalPrice(30000L)
@@ -355,7 +395,22 @@ public class PaymentProcessUseCaseIntegrationTest {
                         .recipientNumber("010-9876-543" + i)
                         .createdAt(LocalDateTime.now())
                         .build();
-                orders.add(orderRepository.save(order));
+                order = orderRepository.save(order);
+                orders.add(order);
+
+                Order tempOrder = order;
+
+                orderProducts = orderProducts.stream()
+                        .map(orderProduct -> {
+                            return OrderProduct.builder()
+                                    .orderId(tempOrder.getId())
+                                    .productId(orderProduct.getProductId())
+                                    .quantity(orderProduct.getQuantity())
+                                    .price(10000L)
+                                    .build();
+                        }).toList();
+
+                List<OrderProduct> savedOrderProducts = orderProductRepository.saveAll(orderProducts);
             }
 
             // when
@@ -423,26 +478,53 @@ public class PaymentProcessUseCaseIntegrationTest {
             List<Exception> exceptions = Collections.synchronizedList(new ArrayList<>());
 
             List<Order> orders = new ArrayList<>();
-            for (int i = 0; i < orderCount; i++) {
-                Address address = new Address(
-                        "서울시 강남구 테헤란로",
-                        "123번길 4" + i,
-                        "12345"
-                );
+            transactionTemplate.executeWithoutResult(status -> {
+                for (int i = 0; i < orderCount; i++) {
+                    Address address = new Address(
+                            "서울시 강남구 테헤란로",
+                            "123번길 4" + i,
+                            "12345"
+                    );
 
-                Order order = Order.builder()
-                        .userId(testUser.getId())
-                        .status(OrderStatus.PENDING)
-                        .orderProducts(List.of())
-                        .totalPrice(orderPrice)
-                        .discountAmount(0L)
-                        .finalPrice(orderPrice)
-                        .shippingAddress(address)
-                        .recipientNumber("test-phone-" + i)
-                        .createdAt(LocalDateTime.now())
-                        .build();
-                orders.add(orderRepository.save(order));
-            }
+                    List<OrderProduct> orderProducts = new ArrayList<>();
+                    orderProducts.add(OrderProduct.builder()
+                            .productId(1L)
+                            .quantity(1)
+                            .build());
+                    orderProducts.add(OrderProduct.builder()
+                            .productId(2L)
+                            .quantity(10)
+                            .build());
+
+                    Order order = Order.builder()
+                            .userId(testUser.getId())
+                            .status(OrderStatus.PENDING)
+                            .orderProducts(orderProducts)
+                            .totalPrice(orderPrice)
+                            .discountAmount(0L)
+                            .finalPrice(orderPrice)
+                            .shippingAddress(address)
+                            .recipientNumber("test-phone-" + i)
+                            .createdAt(LocalDateTime.now())
+                            .build();
+                    order = orderRepository.save(order);
+                    orders.add(order);
+
+                    Order tempOrder = order;
+
+                    orderProducts = orderProducts.stream()
+                            .map(orderProduct -> {
+                                return OrderProduct.builder()
+                                        .orderId(tempOrder.getId())
+                                        .productId(orderProduct.getProductId())
+                                        .quantity(orderProduct.getQuantity())
+                                        .price(10000L)
+                                        .build();
+                            }).toList();
+
+                    List<OrderProduct> savedOrderProducts = orderProductRepository.saveAll(orderProducts);
+                }
+            });
 
             // when
             for (int i = 0; i < orderCount; i++) {
