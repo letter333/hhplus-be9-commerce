@@ -14,6 +14,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -55,6 +57,12 @@ class OrderCreateUseCaseTest {
     private RedissonLockManager redissonLockManager;
 
     @Mock
+    private CacheManager cacheManager;
+
+    @Mock
+    private Cache cache;
+
+    @Mock
     private RLock rLock;
 
     @Mock
@@ -68,6 +76,7 @@ class OrderCreateUseCaseTest {
         lenient().when(redissonLockManager.getLock(anyString())).thenReturn(rLock);
         when(redissonLockManager.getMultiLock(anyList())).thenReturn(multiLock);
         when(multiLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class))).thenReturn(true);
+        lenient().when(cacheManager.getCache("product")).thenReturn(cache);
 
         doAnswer(invocation -> {
             TransactionCallback<?> callback = invocation.getArgument(0);
