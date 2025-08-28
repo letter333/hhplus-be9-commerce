@@ -4,15 +4,14 @@ import kr.hhplus.be.server.application.event.PaymentSuccessEvent;
 import kr.hhplus.be.server.application.usecase.dto.command.PaymentProcessCommand;
 import kr.hhplus.be.server.domain.component.RedissonLockManager;
 import kr.hhplus.be.server.domain.model.*;
-import kr.hhplus.be.server.domain.repository.OrderRepository;
-import kr.hhplus.be.server.domain.repository.PaymentRepository;
-import kr.hhplus.be.server.domain.repository.PointHistoryRepository;
-import kr.hhplus.be.server.domain.repository.PointRepository;
+import kr.hhplus.be.server.domain.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
@@ -25,6 +24,7 @@ public class PaymentProcessUseCase {
     private final OrderRepository orderRepository;
     private final PointRepository pointRepository;
     private final PointHistoryRepository pointHistoryRepository;
+    private final ProductRankingRepository productRankingRepository;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final TransactionTemplate transactionTemplate;
     private final RedissonLockManager redissonLockManager;
@@ -94,6 +94,13 @@ public class PaymentProcessUseCase {
 
                 Payment savedPayment = paymentRepository.save(payment);
                 applicationEventPublisher.publishEvent(new PaymentSuccessEvent(savedPayment));
+
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        productRankingRepository.updateRanking(order);
+                    }
+                });
 
                 return savedPayment;
             });

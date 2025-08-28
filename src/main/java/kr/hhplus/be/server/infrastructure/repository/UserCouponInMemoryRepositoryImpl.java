@@ -33,6 +33,11 @@ public class UserCouponInMemoryRepositoryImpl implements UserCouponRepository {
     }
 
     @Override
+    public List<UserCoupon> findByCouponId(Long couponId) {
+        return List.of();
+    }
+
+    @Override
     public boolean existsByCouponIdAndUserId(Long couponId, Long userId) {
         return table.values().stream()
                 .anyMatch(userCouponEntity ->

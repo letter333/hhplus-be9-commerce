@@ -1,14 +1,13 @@
 package kr.hhplus.be.server.application.usecase;
 
 import kr.hhplus.be.server.application.usecase.dto.command.CouponIssueCommand;
-import kr.hhplus.be.server.domain.component.RedissonLockManager;
 import kr.hhplus.be.server.domain.model.Coupon;
 import kr.hhplus.be.server.domain.model.CouponType;
 import kr.hhplus.be.server.domain.model.UserCoupon;
 import kr.hhplus.be.server.domain.model.UserCouponStatus;
+import kr.hhplus.be.server.domain.repository.CouponRedisRepository;
 import kr.hhplus.be.server.domain.repository.CouponRepository;
 import kr.hhplus.be.server.domain.repository.UserCouponRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -16,13 +15,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.redisson.api.RLock;
-import org.springframework.transaction.support.TransactionCallback;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 import static org.mockito.BDDMockito.*;
 import static org.assertj.core.api.Assertions.*;
@@ -37,28 +32,10 @@ class CouponIssueUseCaseTest {
     private UserCouponRepository userCouponRepository;
 
     @Mock
-    private TransactionTemplate transactionTemplate;
-
-    @Mock
-    private RedissonLockManager redissonLockManager;
-
-    @Mock
-    private RLock rLock;
+    private CouponRedisRepository couponRedisRepository;
 
     @InjectMocks
     private CouponIssueUseCase couponIssueUseCase;
-
-    @BeforeEach
-    void setUp() throws InterruptedException {
-        when(redissonLockManager.getLock(anyString())).thenReturn(rLock);
-        when(rLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class))).thenReturn(true);
-        when(rLock.isHeldByCurrentThread()).thenReturn(true);
-
-        doAnswer(invocation -> {
-            TransactionCallback<?> callback = invocation.getArgument(0);
-            return callback.doInTransaction(null);
-        }).when(transactionTemplate).execute(any(TransactionCallback.class));
-    }
 
     @Nested
     @DisplayName("쿠폰 발급 테스트")
@@ -91,9 +68,8 @@ class CouponIssueUseCaseTest {
                     .build();
 
             when(couponRepository.findById(couponId)).thenReturn(Optional.of(coupon));
-            when(userCouponRepository.existsByCouponIdAndUserId(couponId, userId)).thenReturn(false);
-            when(couponRepository.save(any(Coupon.class))).thenReturn(coupon);
-            when(userCouponRepository.save(any(UserCoupon.class))).thenReturn(userCoupon);
+            when(couponRedisRepository.isAlreadyIssued(couponId, userId)).thenReturn(false);
+            when(couponRedisRepository.incrementIssuedCouponCount(couponId)).thenReturn(1L);
 
             // when
             UserCoupon result = couponIssueUseCase.execute(command);
@@ -104,12 +80,12 @@ class CouponIssueUseCaseTest {
             assertThat(result.getCouponId()).isEqualTo(couponId);
             assertThat(result.getStatus()).isEqualTo(UserCouponStatus.ISSUED);
             assertThat(result.getCouponCode()).isNotBlank();
-            assertThat(coupon.getIssuedQuantity()).isEqualTo(1);
+            assertThat(result.getExpiredAt()).isEqualTo(coupon.getExpiredAt());
 
             verify(couponRepository).findById(couponId);
-            verify(userCouponRepository).existsByCouponIdAndUserId(couponId, userId);
-            verify(couponRepository).save(coupon);
-            verify(userCouponRepository).save(any(UserCoupon.class));
+            verify(couponRedisRepository).isAlreadyIssued(couponId, userId);
+            verify(couponRedisRepository).incrementIssuedCouponCount(couponId);
+            verify(couponRedisRepository).addCouponIssueRequestToQueue(eq(couponId), eq(userId), anyString(), eq(coupon.getExpiredAt()));
         }
 
         @Test
@@ -149,16 +125,15 @@ class CouponIssueUseCaseTest {
                     .build();
 
             when(couponRepository.findById(couponId)).thenReturn(Optional.of(coupon));
-            when(userCouponRepository.existsByCouponIdAndUserId(couponId, userId)).thenReturn(true);
+            when(couponRedisRepository.isAlreadyIssued(couponId, userId)).thenReturn(true);
 
             // when & then
             assertThatThrownBy(() -> couponIssueUseCase.execute(command))
                     .isInstanceOf(IllegalArgumentException.class);
 
             verify(couponRepository).findById(couponId);
-            verify(userCouponRepository).existsByCouponIdAndUserId(couponId, userId);
-            verify(couponRepository, never()).save(any());
-            verify(userCouponRepository, never()).save(any());
+            verify(couponRedisRepository).isAlreadyIssued(couponId, userId);
+            verify(couponRedisRepository, never()).incrementIssuedCouponCount(any());
         }
 
         @Test
@@ -180,16 +155,19 @@ class CouponIssueUseCaseTest {
                     .build();
 
             when(couponRepository.findById(couponId)).thenReturn(Optional.of(soldOutCoupon));
-            when(userCouponRepository.existsByCouponIdAndUserId(couponId, userId)).thenReturn(false);
+            when(couponRedisRepository.isAlreadyIssued(couponId, userId)).thenReturn(false);
+            when(couponRedisRepository.incrementIssuedCouponCount(couponId)).thenReturn(101L);
 
             // when & then
             assertThatThrownBy(() -> couponIssueUseCase.execute(command))
                     .isInstanceOf(IllegalArgumentException.class);
 
             verify(couponRepository).findById(couponId);
-            verify(userCouponRepository).existsByCouponIdAndUserId(couponId, userId);
-            verify(couponRepository, never()).save(any());
-            verify(userCouponRepository, never()).save(any());
+            verify(couponRedisRepository).isAlreadyIssued(couponId, userId);
+            verify(couponRedisRepository).incrementIssuedCouponCount(couponId);
+            verify(couponRedisRepository).removeIssuedUser(couponId, userId);
+            verify(couponRedisRepository).decrementIssuedCouponCount(couponId);
+            verify(couponRedisRepository, never()).addCouponIssueRequestToQueue(any(), any(), any(), any());
         }
 
         @Test
@@ -211,16 +189,13 @@ class CouponIssueUseCaseTest {
                     .build();
 
             when(couponRepository.findById(couponId)).thenReturn(Optional.of(expiredCoupon));
-            when(userCouponRepository.existsByCouponIdAndUserId(couponId, userId)).thenReturn(false);
 
             // when & then
             assertThatThrownBy(() -> couponIssueUseCase.execute(command))
                     .isInstanceOf(IllegalArgumentException.class);
 
             verify(couponRepository).findById(couponId);
-            verify(userCouponRepository).existsByCouponIdAndUserId(couponId, userId);
-            verify(couponRepository, never()).save(any());
-            verify(userCouponRepository, never()).save(any());
+            verifyNoInteractions(couponRedisRepository, userCouponRepository);
         }
 
         @Test
@@ -239,9 +214,9 @@ class CouponIssueUseCaseTest {
                     .build();
 
             when(couponRepository.findById(couponId)).thenReturn(Optional.of(mockCoupon));
-            when(userCouponRepository.existsByCouponIdAndUserId(eq(couponId), any())).thenReturn(false);
-            when(couponRepository.save(any(Coupon.class))).thenReturn(mockCoupon);
-            when(userCouponRepository.save(any(UserCoupon.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(couponRedisRepository.isAlreadyIssued(eq(couponId), any())).thenReturn(false);
+            when(couponRedisRepository.incrementIssuedCouponCount(couponId))
+                    .thenReturn(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L);
 
             Set<String> generatedCodes = new HashSet<>();
 
@@ -254,7 +229,7 @@ class CouponIssueUseCaseTest {
 
             // then
             assertThat(generatedCodes).hasSize(10);
-            assertThat(mockCoupon.getIssuedQuantity()).isEqualTo(10);
+            verify(couponRedisRepository, times(10)).addCouponIssueRequestToQueue(any(), any(), any(), any());
         }
     }
 }
