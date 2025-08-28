@@ -30,7 +30,7 @@ dependencyManagement {
 }
 
 dependencies {
-    // Spring
+	// Spring
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-web")
@@ -47,8 +47,10 @@ dependencies {
 	// Redisson
 	implementation("org.redisson:redisson-spring-boot-starter:3.46.0")
 
-    // Test
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
+	implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
+
+	// Test
+	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.springframework.boot:spring-boot-testcontainers")
 	testImplementation("org.testcontainers:junit-jupiter")
 	testImplementation("org.testcontainers:mysql")
