@@ -93,6 +93,7 @@ public class PaymentProcessUseCase {
                         .build();
 
                 Payment savedPayment = paymentRepository.save(payment);
+
                 applicationEventPublisher.publishEvent(new PaymentSuccessEvent(savedPayment));
 
                 TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
