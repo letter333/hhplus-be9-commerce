@@ -6,16 +6,20 @@ import kr.hhplus.be.server.domain.model.Order;
 import kr.hhplus.be.server.domain.repository.*;
 import kr.hhplus.be.server.domain.service.ExternalPaymentDataPlatformService;
 import org.junit.jupiter.api.*;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.TestcontainersConfiguration;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.*;
+import static org.mockito.BDDMockito.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -30,6 +34,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
 @Testcontainers
+@EmbeddedKafka(
+        partitions = 1,
+        topics = {"payment-success"},
+        brokerProperties = {
+                "listeners=PLAINTEXT://localhost:9093",
+                "port=9093"
+        }
+)
 public class PaymentProcessUseCaseIntegrationTest {
 
     @Autowired
@@ -134,7 +146,7 @@ public class PaymentProcessUseCaseIntegrationTest {
     class PointPaymentIntegrationTest {
         @Test
         @DisplayName("포인트 결제 성공")
-        void 포인트_결제() {
+        void 포인트_결제() throws InterruptedException {
             // given
             setUp();
             PaymentProcessCommand command = new PaymentProcessCommand(
@@ -142,9 +154,17 @@ public class PaymentProcessUseCaseIntegrationTest {
                     testOrder.getId(),
                     PaymentMethod.POINT
             );
+            CountDownLatch latch = new CountDownLatch(1);
+            ArgumentCaptor<Payment> paymentCaptor = ArgumentCaptor.forClass(Payment.class);
+
+            doAnswer(invocation -> {
+                latch.countDown();
+                return null;
+            }).when(externalPaymentDataPlatformService).sendPaymentInfo(paymentCaptor.capture());
 
             // when
             Payment result = paymentProcessUseCase.execute(command);
+            boolean kafkaProcessed = latch.await(5, TimeUnit.SECONDS);
 
             // then
             assertThat(result).isNotNull();
@@ -159,7 +179,30 @@ public class PaymentProcessUseCaseIntegrationTest {
             Point updatedPoint = pointRepository.findByUserId(testUser.getId()).orElseThrow();
             assertThat(updatedPoint.getBalance()).isEqualTo(100000L - 50000L);
 
-            verify(externalPaymentDataPlatformService, times(1)).sendPaymentInfo(any(Payment.class));
+            verify(externalPaymentDataPlatformService, timeout(5000))
+                    .sendPaymentInfo(argThat(p ->
+                            p.getOrderId().equals(result.getOrderId()) &&
+                                    p.getAmount().equals(result.getAmount()) &&
+                                    p.getPaymentMethod() == PaymentMethod.POINT
+                    ));
+
+            Payment capturedPayment = paymentCaptor.getValue();
+            assertThat(capturedPayment).isNotNull();
+
+            assertThat(capturedPayment.getOrderId()).isNotNull();
+            assertThat(capturedPayment.getAmount()).isNotNull();
+            assertThat(capturedPayment.getPaymentMethod()).isNotNull();
+            assertThat(capturedPayment.getStatus()).isNotNull();
+
+            assertThat(capturedPayment.getOrderId()).isInstanceOf(Long.class);
+            assertThat(capturedPayment.getAmount()).isInstanceOf(Long.class);
+            assertThat(capturedPayment.getPaymentMethod()).isInstanceOf(PaymentMethod.class);
+            assertThat(capturedPayment.getStatus()).isInstanceOf(PaymentStatus.class);
+
+            assertThat(capturedPayment.getOrderId()).isEqualTo(result.getOrderId());
+            assertThat(capturedPayment.getAmount()).isEqualTo(result.getAmount());
+            assertThat(capturedPayment.getPaymentMethod()).isEqualTo(result.getPaymentMethod());
+            assertThat(capturedPayment.getStatus()).isEqualTo(result.getStatus());
         }
 
         @Test

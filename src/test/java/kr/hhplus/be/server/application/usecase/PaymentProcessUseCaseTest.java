@@ -9,6 +9,7 @@ import kr.hhplus.be.server.domain.repository.PaymentRepository;
 import kr.hhplus.be.server.domain.repository.PointHistoryRepository;
 import kr.hhplus.be.server.domain.repository.PointRepository;
 import kr.hhplus.be.server.domain.service.ExternalPaymentDataPlatformService;
+import kr.hhplus.be.server.infrastructure.kafka.PaymentKafkaProducer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,10 @@ class PaymentProcessUseCaseTest {
 
     @Mock
     private PointHistoryRepository pointHistoryRepository;
+
+    @Mock
+    private PaymentKafkaProducer kafkaProducer;
+
 
     @Mock
     private ApplicationEventPublisher applicationEventPublisher;
@@ -115,7 +120,7 @@ class PaymentProcessUseCaseTest {
         then(pointRepository).should().save(mockPoint);
         then(orderRepository).should().save(mockOrder);
         then(paymentRepository).should().save(any(Payment.class));
-        then(applicationEventPublisher).should().publishEvent(any(PaymentSuccessEvent.class));
+        then(kafkaProducer).should().send(any(PaymentSuccessEvent.class));
     }
 
     @Test
