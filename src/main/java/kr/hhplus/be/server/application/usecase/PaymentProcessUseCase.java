@@ -5,6 +5,7 @@ import kr.hhplus.be.server.application.usecase.dto.command.PaymentProcessCommand
 import kr.hhplus.be.server.domain.component.RedissonLockManager;
 import kr.hhplus.be.server.domain.model.*;
 import kr.hhplus.be.server.domain.repository.*;
+import kr.hhplus.be.server.infrastructure.kafka.PaymentKafkaProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -28,6 +29,7 @@ public class PaymentProcessUseCase {
     private final ApplicationEventPublisher applicationEventPublisher;
     private final TransactionTemplate transactionTemplate;
     private final RedissonLockManager redissonLockManager;
+    private final PaymentKafkaProducer kafkaProducer;
 
     public Payment execute(PaymentProcessCommand command) {
         String orderLockKey = "paymentProcessLock:" + command.orderId();
@@ -93,7 +95,7 @@ public class PaymentProcessUseCase {
                         .build();
 
                 Payment savedPayment = paymentRepository.save(payment);
-                applicationEventPublisher.publishEvent(new PaymentSuccessEvent(savedPayment));
+                kafkaProducer.send(new PaymentSuccessEvent(savedPayment));
 
                 TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                     @Override
