@@ -14,22 +14,36 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.TestcontainersConfiguration;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.awaitility.Awaitility.await;
+import static org.mockito.BDDMockito.*;
 
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
 @Testcontainers
+@EmbeddedKafka(
+        partitions = 3,
+        topics = {"coupon-issue"},
+        brokerProperties = {
+                "listeners=PLAINTEXT://localhost:9093",
+                "port=9093"
+        }
+)
 public class CouponIssueUseCaseIntegrationTest {
 
     @Autowired
@@ -196,6 +210,103 @@ public class CouponIssueUseCaseIntegrationTest {
 
             Long issuedCount = couponRedisRepository.getIssuedCouponCount(savedCoupon.getId());
             assertThat(issuedCount).isEqualTo(couponQuantity);
+        }
+    }
+
+    @Nested
+    @DisplayName("Kafka Consumer 통합 테스트")
+    class KafkaConsumerIntegrationTest {
+
+        @Test
+        @DisplayName("쿠폰 발급 후 Kafka Consumer가 정상적으로 DB에 저장하는지 검증")
+        void 쿠폰_발급_후_Consumer가_DB에_저장() throws InterruptedException {
+            // given
+            LocalDateTime expiredAt = LocalDateTime.now().plusDays(30).truncatedTo(ChronoUnit.MICROS);
+            Coupon coupon = Coupon.builder()
+                    .name("Kafka 테스트 쿠폰")
+                    .type(CouponType.FIXED)
+                    .discountAmount(1000L)
+                    .quantity(100)
+                    .issuedQuantity(0)
+                    .expiredAt(expiredAt)
+                    .createdAt(LocalDateTime.now().truncatedTo(ChronoUnit.MICROS))
+                    .build();
+
+            Coupon savedCoupon = couponRepository.save(coupon);
+            CouponIssueCommand command = new CouponIssueCommand(savedCoupon.getId(), 10L);
+
+            // when
+            UserCoupon result = couponIssueUseCase.execute(command);
+
+            // then
+            await().atMost(Duration.ofSeconds(10))
+                    .untilAsserted(() -> {
+                        Optional<UserCoupon> savedUserCoupon = userCouponRepository
+                                .findByCouponIdAndUserId(savedCoupon.getId(), 10L);
+
+                        assertThat(savedUserCoupon).isPresent();
+                        assertThat(savedUserCoupon.get().getStatus()).isEqualTo(UserCouponStatus.ISSUED);
+                        assertThat(savedUserCoupon.get().getCouponCode()).isNotEmpty();
+                        assertThat(savedUserCoupon.get().getCouponId()).isEqualTo(savedCoupon.getId());
+                        assertThat(savedUserCoupon.get().getUserId()).isEqualTo(10L);
+                    });
+        }
+//
+        @Test
+        @DisplayName("동시성 테스트에서 Redis 통과한 사용자만 DB에 저장되는지 검증")
+        void 동시성_테스트에서_Consumer가_올바르게_처리() throws InterruptedException {
+            // given
+            int userCount = 50;
+            int couponQuantity = 5;
+            ExecutorService executorService = Executors.newFixedThreadPool(32);
+            CountDownLatch latch = new CountDownLatch(userCount);
+            AtomicInteger successCount = new AtomicInteger(0);
+
+            Coupon savedCoupon = transactionTemplate.execute(status -> {
+                Coupon testCoupon = Coupon.builder()
+                        .name("Kafka 동시성 테스트 쿠폰")
+                        .type(CouponType.FIXED)
+                        .issuedQuantity(0)
+                        .discountAmount(1000L)
+                        .quantity(couponQuantity)
+                        .expiredAt(LocalDateTime.now().plusDays(10))
+                        .build();
+                return couponRepository.save(testCoupon);
+            });
+
+            // when
+            for (int i = 0; i < userCount; i++) {
+                final long userId = i + 100;
+                executorService.submit(() -> {
+                    try {
+                        CouponIssueCommand command = new CouponIssueCommand(savedCoupon.getId(), userId);
+                        couponIssueUseCase.execute(command);
+                        successCount.getAndIncrement();
+                    } catch (IllegalArgumentException e) {
+
+                    } finally {
+                        latch.countDown();
+                    }
+                });
+            }
+
+            latch.await();
+            executorService.shutdown();
+
+            // then
+            await().atMost(Duration.ofSeconds(15))
+                    .untilAsserted(() -> {
+                        List<UserCoupon> savedUserCoupons = userCouponRepository.findAllByCouponId(savedCoupon.getId());
+
+                        assertThat(savedUserCoupons).hasSize(couponQuantity);
+                        assertThat(successCount.get()).isEqualTo(couponQuantity);
+
+                        assertThat(savedUserCoupons).allMatch(userCoupon ->
+                                userCoupon.getStatus() == UserCouponStatus.ISSUED);
+                    });
+
+            Long redisIssuedCount = couponRedisRepository.getIssuedCouponCount(savedCoupon.getId());
+            assertThat(redisIssuedCount).isEqualTo(couponQuantity);
         }
     }
 }
