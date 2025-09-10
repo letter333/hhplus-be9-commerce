@@ -1,11 +1,13 @@
 package kr.hhplus.be.server.application.usecase;
 
+import kr.hhplus.be.server.application.event.CouponIssueEvent;
 import kr.hhplus.be.server.application.usecase.dto.command.CouponIssueCommand;
 import kr.hhplus.be.server.domain.model.Coupon;
 import kr.hhplus.be.server.domain.model.UserCoupon;
 import kr.hhplus.be.server.domain.model.UserCouponStatus;
 import kr.hhplus.be.server.domain.repository.CouponRedisRepository;
 import kr.hhplus.be.server.domain.repository.CouponRepository;
+import kr.hhplus.be.server.infrastructure.kafka.KafkaProducer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +19,10 @@ import java.util.UUID;
 public class CouponIssueUseCase {
     private final CouponRepository couponRepository;
     private final CouponRedisRepository couponRedisRepository;
+    private final KafkaProducer kafkaProducer;
+
+    private static final String COUPON_ISSUE_TOPIC = "coupon-issue";
+
 
     public UserCoupon execute(CouponIssueCommand command) {
         Coupon coupon = couponRepository.findById(command.couponId())
@@ -40,12 +46,23 @@ public class CouponIssueUseCase {
 
         String couponCode = generateCouponCode();
 
-        couponRedisRepository.addCouponIssueRequestToQueue(
-                command.couponId(),
-                command.userId(),
-                couponCode,
-                coupon.getExpiredAt()
-        );
+// Kafka에서 발행으로 변경
+//        couponRedisRepository.addCouponIssueRequestToQueue(
+//                command.couponId(),
+//                command.userId(),
+//                couponCode,
+//                coupon.getExpiredAt()
+//        );
+
+        CouponIssueEvent event = CouponIssueEvent.builder()
+                .couponId(command.couponId())
+                .userId(command.userId())
+                .couponCode(couponCode)
+                .expiredAt(coupon.getExpiredAt())
+                .build();
+
+        kafkaProducer.send(COUPON_ISSUE_TOPIC, event);
+
 
         return UserCoupon.builder()
                 .couponId(command.couponId())

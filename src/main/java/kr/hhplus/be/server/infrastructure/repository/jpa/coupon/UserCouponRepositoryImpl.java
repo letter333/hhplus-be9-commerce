@@ -31,7 +31,7 @@ public class UserCouponRepositoryImpl implements UserCouponRepository {
     }
 
     @Override
-    public List<UserCoupon> findByCouponId(Long couponId) {
+    public List<UserCoupon> findAllByCouponId(Long couponId) {
         return userCouponJpaRepository.findByCouponId(couponId)
                 .stream().map(UserCouponMapper::toUserCoupon).toList();
     }

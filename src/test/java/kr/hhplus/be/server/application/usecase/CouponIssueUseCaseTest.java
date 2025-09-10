@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.application.usecase;
 
+import kr.hhplus.be.server.application.event.CouponIssueEvent;
 import kr.hhplus.be.server.application.usecase.dto.command.CouponIssueCommand;
 import kr.hhplus.be.server.domain.model.Coupon;
 import kr.hhplus.be.server.domain.model.CouponType;
@@ -8,6 +9,7 @@ import kr.hhplus.be.server.domain.model.UserCouponStatus;
 import kr.hhplus.be.server.domain.repository.CouponRedisRepository;
 import kr.hhplus.be.server.domain.repository.CouponRepository;
 import kr.hhplus.be.server.domain.repository.UserCouponRepository;
+import kr.hhplus.be.server.infrastructure.kafka.KafkaProducer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -34,8 +36,13 @@ class CouponIssueUseCaseTest {
     @Mock
     private CouponRedisRepository couponRedisRepository;
 
+    @Mock
+    private KafkaProducer kafkaProducer;
+
     @InjectMocks
     private CouponIssueUseCase couponIssueUseCase;
+
+    private static final String COUPON_ISSUE_TOPIC = "coupon-issue";
 
     @Nested
     @DisplayName("쿠폰 발급 테스트")
@@ -85,7 +92,7 @@ class CouponIssueUseCaseTest {
             verify(couponRepository).findById(couponId);
             verify(couponRedisRepository).isAlreadyIssued(couponId, userId);
             verify(couponRedisRepository).incrementIssuedCouponCount(couponId);
-            verify(couponRedisRepository).addCouponIssueRequestToQueue(eq(couponId), eq(userId), anyString(), eq(coupon.getExpiredAt()));
+            verify(kafkaProducer).send(eq(COUPON_ISSUE_TOPIC), any(CouponIssueEvent.class));
         }
 
         @Test
@@ -104,6 +111,7 @@ class CouponIssueUseCaseTest {
 
             verify(couponRepository).findById(couponId);
             verifyNoInteractions(userCouponRepository);
+            verifyNoInteractions(kafkaProducer);
         }
 
         @Test
@@ -134,6 +142,7 @@ class CouponIssueUseCaseTest {
             verify(couponRepository).findById(couponId);
             verify(couponRedisRepository).isAlreadyIssued(couponId, userId);
             verify(couponRedisRepository, never()).incrementIssuedCouponCount(any());
+            verifyNoInteractions(kafkaProducer);
         }
 
         @Test
@@ -167,7 +176,7 @@ class CouponIssueUseCaseTest {
             verify(couponRedisRepository).incrementIssuedCouponCount(couponId);
             verify(couponRedisRepository).removeIssuedUser(couponId, userId);
             verify(couponRedisRepository).decrementIssuedCouponCount(couponId);
-            verify(couponRedisRepository, never()).addCouponIssueRequestToQueue(any(), any(), any(), any());
+            verifyNoInteractions(kafkaProducer);
         }
 
         @Test
@@ -195,7 +204,7 @@ class CouponIssueUseCaseTest {
                     .isInstanceOf(IllegalArgumentException.class);
 
             verify(couponRepository).findById(couponId);
-            verifyNoInteractions(couponRedisRepository, userCouponRepository);
+            verifyNoInteractions(couponRedisRepository, kafkaProducer);
         }
 
         @Test
@@ -229,7 +238,7 @@ class CouponIssueUseCaseTest {
 
             // then
             assertThat(generatedCodes).hasSize(10);
-            verify(couponRedisRepository, times(10)).addCouponIssueRequestToQueue(any(), any(), any(), any());
+            verify(kafkaProducer, times(10)).send(eq(COUPON_ISSUE_TOPIC), any(CouponIssueEvent.class));
         }
     }
 }

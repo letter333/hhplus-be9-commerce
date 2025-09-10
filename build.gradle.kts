@@ -40,6 +40,7 @@ dependencies {
 
 	// Springdoc
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0")
+	testImplementation("org.testcontainers:kafka")
 
 	// DB
 	runtimeOnly("com.mysql:mysql-connector-j")
@@ -49,11 +50,16 @@ dependencies {
 
 	implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 
+	// Kafka
+	implementation("org.springframework.kafka:spring-kafka")
+
 	// Test
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.springframework.boot:spring-boot-testcontainers")
 	testImplementation("org.testcontainers:junit-jupiter")
 	testImplementation("org.testcontainers:mysql")
+	testImplementation("org.springframework.kafka:spring-kafka-test")
+	testImplementation("org.awaitility:awaitility:4.2.1")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 	annotationProcessor("org.projectlombok:lombok")
 }
