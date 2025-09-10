@@ -36,14 +36,14 @@ import static org.mockito.BDDMockito.*;
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
 @Testcontainers
-@EmbeddedKafka(
-        partitions = 3,
-        topics = {"coupon-issue"},
-        brokerProperties = {
-                "listeners=PLAINTEXT://localhost:9093",
-                "port=9093"
-        }
-)
+//@EmbeddedKafka(
+//        partitions = 3,
+//        topics = {"coupon-issue"},
+//        brokerProperties = {
+//                "listeners=PLAINTEXT://localhost: 9093",
+//                "port=9093"
+//        }
+//)
 public class CouponIssueUseCaseIntegrationTest {
 
     @Autowired
