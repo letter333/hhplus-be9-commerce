@@ -18,14 +18,14 @@ public class PointEntity extends BaseEntity {
     @Column(nullable = false)
     private Long balance;
 
-    @Version
-    private Long version;
+//    @Version
+//    private Long version;
 
     @Builder
-    public PointEntity(Long id, Long userId, Long balance, Long version) {
+    public PointEntity(Long id, Long userId, Long balance) {
         this.id = id;
         this.userId = userId;
         this.balance = balance;
-        this.version = version;
+//        this.version = version;
     }
 }
