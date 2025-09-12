@@ -34,14 +34,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
 @Testcontainers
-@EmbeddedKafka(
-        partitions = 1,
-        topics = {"payment-success"},
-        brokerProperties = {
-                "listeners=PLAINTEXT://localhost:9093",
-                "port=9093"
-        }
-)
+//@EmbeddedKafka(
+//        partitions = 1,
+//        topics = {"payment-success"},
+//        brokerProperties = {
+//                "listeners=PLAINTEXT://localhost:9093",
+//                "port=9093"
+//        }
+//)
 public class PaymentProcessUseCaseIntegrationTest {
 
     @Autowired

@@ -51,7 +51,7 @@ public class PointChargeUseCaseIntegrationTest {
         testPoint = pointRepository.save(Point.builder()
                         .userId(testUser.getId())
                         .balance(0L)
-                        .version(0L)
+//                        .version(0L)
                         .build());
     }
 
